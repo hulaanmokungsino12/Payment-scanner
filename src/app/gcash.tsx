@@ -1,0 +1,1561 @@
+import { useCallback, useState } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  Pressable,
+  Alert,
+  TextInput,
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from 'expo-router';
+
+// ========================================
+// ITEMS + ALIASES + PRICES
+// ========================================
+
+const items = {
+  'beef cheese smash burger': {
+    price: 70,
+    aliases: [
+      'burger',
+      'beef burger',
+      'beef cheese burger',
+      'cheese burger',
+      'beef cheese smash burger',
+    ],
+  },
+
+  'puto': {
+    price: 12,
+    aliases: [
+      'puto with cheese',
+      'puto',
+      'putos',
+    ],
+  },
+};
+
+// ========================================
+// GET ITEM PRICE
+// ========================================
+
+const getItemPrice = (itemName: string) => {
+  const normalizedItem = itemName
+    .toLowerCase()
+    .trim();
+
+  for (const item of Object.values(items)) {
+    if (
+      item.aliases.some(
+        (alias) =>
+          alias.toLowerCase().trim() === normalizedItem
+      )
+    ) {
+      return item.price;
+    }
+  }
+
+  return 0;
+};
+
+export default function GCashScreen() {
+
+  const [gcashRecords, setGcashRecords] =
+    useState<any[]>([]);
+
+  // Track which record is being edited
+  const [editingIndex, setEditingIndex] =
+    useState<number | null>(null);
+
+
+  // ========================================
+  // UPDATE CUSTOMER NAME
+  // ========================================
+
+  const updateCustomerName = (
+    recordIndex: number,
+    newName: string
+  ) => {
+
+    const updatedRecords = [...gcashRecords];
+
+    updatedRecords[recordIndex].result.customer =
+      newName;
+
+    setGcashRecords(updatedRecords);
+  };
+
+
+  // ========================================
+  // LOAD RECORDS
+  // ========================================
+
+  const loadRecords = async () => {
+
+    try {
+
+      const savedRecords =
+        await AsyncStorage.getItem(
+          'gcashRecords'
+        );
+
+      if (savedRecords) {
+
+        setGcashRecords(
+          JSON.parse(savedRecords)
+        );
+
+      } else {
+
+        setGcashRecords([]);
+
+      }
+
+    } catch (error) {
+
+      console.error(
+        'Error loading GCash records:',
+        error
+      );
+
+    }
+  };
+
+
+  // ========================================
+  // GET TOTAL PAID
+  // ========================================
+
+  const getTotalPaid = () => {
+
+    let totalPaid = 0;
+
+    gcashRecords.forEach((record) => {
+
+      if (!record.paid) {
+        return;
+      }
+
+      record.result?.orders?.forEach(
+        (order: any) => {
+
+          const itemName =
+            order.item || '';
+
+          const price =
+            getItemPrice(itemName);
+
+          totalPaid +=
+            price *
+            (order.quantity || 0);
+
+        }
+      );
+
+    });
+
+    return totalPaid;
+  };
+
+
+  // ========================================
+  // REFRESH WHEN SCREEN OPENS
+  // ========================================
+
+  useFocusEffect(
+    useCallback(() => {
+      loadRecords();
+    }, [])
+  );
+
+
+  // ========================================
+  // DELETE ALL RECORDS
+  // ========================================
+
+  const deleteAllRecords = () => {
+
+    Alert.alert(
+      'Delete All Records',
+      'Are you sure you want to delete all records?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+
+        {
+          text: 'Delete All',
+          style: 'destructive',
+
+          onPress: async () => {
+
+            try {
+
+              await AsyncStorage.removeItem(
+                'gcashRecords'
+              );
+
+              setGcashRecords([]);
+
+              console.log(
+                'All GCash records deleted'
+              );
+
+            } catch (error) {
+
+              console.error(
+                'Error deleting all GCash records:',
+                error
+              );
+
+            }
+
+          },
+        },
+      ]
+    );
+  };
+
+
+  // ========================================
+  // DELETE RECORD
+  // ========================================
+
+  const deleteRecord = (
+    indexToDelete: number
+  ) => {
+
+    Alert.alert(
+      'Delete Record',
+      'Are you sure you want to delete this record?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+
+        {
+          text: 'Delete',
+          style: 'destructive',
+
+          onPress: async () => {
+
+            try {
+
+              const updatedRecords =
+                gcashRecords.filter(
+                  (_, index) =>
+                    index !== indexToDelete
+                );
+
+              setGcashRecords(
+                updatedRecords
+              );
+
+              await AsyncStorage.setItem(
+                'gcashRecords',
+                JSON.stringify(
+                  updatedRecords
+                )
+              );
+
+              console.log(
+                'GCash record deleted'
+              );
+
+            } catch (error) {
+
+              console.error(
+                'Error deleting GCash record:',
+                error
+              );
+
+            }
+
+          },
+        },
+      ]
+    );
+  };
+
+
+  // ========================================
+  // TOGGLE PAID STATUS
+  // ========================================
+
+  const togglePaid = async (
+    indexToToggle: number
+  ) => {
+
+    try {
+
+      const updatedRecords =
+        [...gcashRecords];
+
+      updatedRecords[indexToToggle] = {
+        ...updatedRecords[indexToToggle],
+
+        paid:
+          !updatedRecords[indexToToggle]
+            .paid,
+      };
+
+      setGcashRecords(
+        updatedRecords
+      );
+
+      await AsyncStorage.setItem(
+        'gcashRecords',
+        JSON.stringify(
+          updatedRecords
+        )
+      );
+
+    } catch (error) {
+
+      console.error(
+        'Error updating paid status:',
+        error
+      );
+
+    }
+  };
+
+
+  // ========================================
+  // UPDATE ITEM NAME
+  // ========================================
+
+  const updateItemName = (
+    recordIndex: number,
+    orderIndex: number,
+    newItemName: string
+  ) => {
+
+    const updatedRecords =
+      [...gcashRecords];
+
+    updatedRecords[
+      recordIndex
+    ].result.orders[
+      orderIndex
+    ].item = newItemName;
+
+    setGcashRecords(
+      updatedRecords
+    );
+  };
+
+
+  // ========================================
+  // UPDATE QUANTITY
+  // ========================================
+
+  const updateQuantity = (
+    recordIndex: number,
+    orderIndex: number,
+    newQuantity: string
+  ) => {
+
+    const updatedRecords =
+      [...gcashRecords];
+
+    const quantity =
+      parseInt(
+        newQuantity,
+        10
+      );
+
+    updatedRecords[
+      recordIndex
+    ].result.orders[
+      orderIndex
+    ].quantity =
+      isNaN(quantity)
+        ? 0
+        : quantity;
+
+    setGcashRecords(
+      updatedRecords
+    );
+  };
+
+  // ========================================
+  // SAVE ALL UPDATED RECORD
+  // ========================================
+
+  const updateAll = async () => {
+    try {
+      const updatedRecords = gcashRecords.map((record) => ({
+        ...record,
+        paid: true,
+      }));
+
+      setGcashRecords(updatedRecords);
+
+      await AsyncStorage.setItem(
+        'gcashRecords',
+        JSON.stringify(updatedRecords)
+      );
+
+      Alert.alert(
+        'Updated',
+        'All GCash records have been marked as paid.'
+      );
+
+      console.log(
+        'All GCash records marked as paid'
+      );
+    } catch (error) {
+      console.error(
+        'Error marking all GCash records as paid:',
+        error
+      );
+    }
+  };
+
+
+  // ========================================
+  // SAVE UPDATED RECORD
+  // ========================================
+
+  const saveUpdate = async (
+    index: number
+  ) => {
+
+    try {
+
+      await AsyncStorage.setItem(
+        'gcashRecords',
+        JSON.stringify(
+          gcashRecords
+        )
+      );
+
+      setEditingIndex(null);
+
+      console.log(
+        'GCash record updated successfully'
+      );
+
+    } catch (error) {
+
+      console.error(
+        'Error saving updated GCash record:',
+        error
+      );
+
+    }
+  };
+
+
+  // ========================================
+  // SCREEN
+  // ========================================
+
+  return (
+
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={
+        styles.container
+      }
+      showsVerticalScrollIndicator={false}
+    >
+
+      {/* ========================================
+          HEADER
+      ======================================== */}
+
+      <View style={styles.header}>
+
+        <Text style={styles.smallHeader}>
+          Payment Records
+        </Text>
+
+        <View style={styles.titleRow}>
+
+          <View style={styles.gcashHeaderIcon}>
+            <Text style={styles.gcashHeaderIconText}>
+              G
+            </Text>
+          </View>
+
+          <View>
+            <Text style={styles.title}>
+              GCash
+            </Text>
+
+            <Text style={styles.subtitle}>
+              GCash payment records
+            </Text>
+          </View>
+
+        </View>
+
+      </View>
+
+
+      {/* ========================================
+          TOTAL PAID CARD
+      ======================================== */}
+
+      <View style={styles.totalCard}>
+
+        <View style={styles.totalIcon}>
+          <Text style={styles.totalIconText}>
+            ₱
+          </Text>
+        </View>
+
+        <View style={styles.totalInfo}>
+
+          <Text style={styles.totalLabel}>
+            Total Paid
+          </Text>
+
+          <Text style={styles.totalAmount}>
+            ₱{getTotalPaid()}
+          </Text>
+
+        </View>
+
+      </View>
+
+
+      {/* ========================================
+          DELETE ALL
+      ======================================== */}
+
+      <Pressable
+        style={styles.deleteAllButton}
+        onPress={deleteAllRecords}
+      >
+
+        <Text style={styles.deleteAllIcon}>
+          🗑
+        </Text>
+
+        <Text style={styles.deleteAllButtonText}>
+          Delete All Records
+        </Text>
+
+      </Pressable>
+
+      {/* ========================================
+                UPDATE ALL
+      ======================================== */}
+
+      <Pressable
+        style={styles.updateAllButton}
+        onPress={updateAll}
+      >
+        <Text style={styles.updateAllButtonText}>
+          UPDATE ALL
+        </Text>
+      </Pressable>
+
+
+      {/* ========================================
+          EMPTY STATE
+      ======================================== */}
+
+      {gcashRecords.length === 0 ? (
+
+        <View style={styles.emptyCard}>
+
+          <View style={styles.emptyIcon}>
+            <Text style={styles.emptyIconText}>
+              G
+            </Text>
+          </View>
+
+          <Text style={styles.emptyTitle}>
+            No GCash Records
+          </Text>
+
+          <Text style={styles.emptyText}>
+            Scanned GCash orders will appear here.
+          </Text>
+
+        </View>
+
+      ) : (
+
+        gcashRecords.map(
+          (record, index) => {
+
+            let total = 0;
+
+            return (
+
+              <View
+                key={index}
+                style={styles.recordCard}
+              >
+
+                {/* =================================
+                    CARD HEADER
+                ================================= */}
+
+                <View style={styles.cardHeader}>
+
+                  <View style={styles.customerSection}>
+
+                    <Text style={styles.customerLabel}>
+                      CUSTOMER
+                    </Text>
+
+                    {editingIndex === index ? (
+
+                      <TextInput
+                        style={styles.customerInput}
+                        value={
+                          record.result?.customer ||
+                          ''
+                        }
+                        onChangeText={(text) =>
+                          updateCustomerName(
+                            index,
+                            text
+                          )
+                        }
+                      />
+
+                    ) : (
+
+                      <Text style={styles.customer}>
+                        {record.result?.customer ||
+                          'Unknown Customer'}
+                      </Text>
+
+                    )}
+
+                  </View>
+
+                  <View style={styles.gcashBadge}>
+
+                    <Text style={styles.gcashBadgeText}>
+                      GCASH
+                    </Text>
+
+                  </View>
+
+                </View>
+
+
+                {/* =================================
+                    DIVIDER
+                ================================= */}
+
+                <View style={styles.divider} />
+
+
+                {/* =================================
+                    ORDERS
+                ================================= */}
+
+                <Text style={styles.ordersLabel}>
+                  ORDER
+                </Text>
+
+                {record.result?.orders?.map(
+                  (
+                    order: any,
+                    orderIndex: number
+                  ) => {
+
+                    const itemName =
+                      order.item || '';
+
+                    const price =
+                      getItemPrice(
+                        itemName
+                      );
+
+                    const itemTotal =
+                      price *
+                      (order.quantity || 0);
+
+                    total += itemTotal;
+
+
+                    // =================================
+                    // EDIT MODE
+                    // =================================
+
+                    if (
+                      editingIndex === index
+                    ) {
+
+                      return (
+
+                        <View
+                          key={orderIndex}
+                          style={
+                            styles.editOrderRow
+                          }
+                        >
+
+                          <TextInput
+                            style={
+                              styles.itemNameInput
+                            }
+                            value={
+                              order.item || ''
+                            }
+                            onChangeText={(text) =>
+                              updateItemName(
+                                index,
+                                orderIndex,
+                                text
+                              )
+                            }
+                          />
+
+                          <TextInput
+                            style={
+                              styles.quantityInput
+                            }
+                            value={String(
+                              order.quantity
+                            )}
+                            keyboardType="numeric"
+                            onChangeText={(text) =>
+                              updateQuantity(
+                                index,
+                                orderIndex,
+                                text
+                              )
+                            }
+                          />
+
+                          <Text
+                            style={styles.xText}
+                          >
+                            x
+                          </Text>
+
+                          <Text
+                            style={
+                              styles.itemPrice
+                            }
+                          >
+                            ₱{price}
+                          </Text>
+
+                        </View>
+
+                      );
+                    }
+
+
+                    // =================================
+                    // NORMAL MODE
+                    // =================================
+
+                    return (
+
+                      <View
+                        key={orderIndex}
+                        style={styles.orderRow}
+                      >
+
+                        <View style={styles.orderLeft}>
+
+                          <Text
+                            style={
+                              styles.order
+                            }
+                          >
+                            {itemName}
+                          </Text>
+
+                          <Text
+                            style={
+                              styles.quantityText
+                            }
+                          >
+                            x{order.quantity}
+                          </Text>
+
+                        </View>
+
+                        <Text
+                          style={
+                            styles.itemPrice
+                          }
+                        >
+                          ₱{itemTotal}
+                        </Text>
+
+                      </View>
+
+                    );
+
+                  }
+                )}
+
+
+                {/* =================================
+                    TOTAL
+                ================================= */}
+
+                <View style={styles.amountBox}>
+
+                  <Text style={styles.amountLabel}>
+                    TOTAL
+                  </Text>
+
+                  <Text style={styles.amount}>
+                    ₱{total}
+                  </Text>
+
+                </View>
+
+
+                {/* =================================
+                    PAYMENT
+                ================================= */}
+
+                <Text style={styles.payment}>
+                  Payment: {record.result?.payment || 'GCash'}
+                </Text>
+
+
+                {/* =================================
+                    UPDATE / SAVE
+                ================================= */}
+
+                {editingIndex === index ? (
+
+                  <Pressable
+                    style={styles.saveButton}
+                    onPress={() =>
+                      saveUpdate(index)
+                    }
+                  >
+
+                    <Text style={styles.saveButtonIcon}>
+                      ✓
+                    </Text>
+
+                    <Text style={styles.saveButtonText}>
+                      Save Update
+                    </Text>
+
+                  </Pressable>
+
+                ) : (
+
+                  <Pressable
+                    style={styles.updateButton}
+                    onPress={() =>
+                      setEditingIndex(index)
+                    }
+                  >
+
+                    <Text style={styles.updateButtonIcon}>
+                      ✎
+                    </Text>
+
+                    <Text style={styles.updateButtonText}>
+                      Update Order
+                    </Text>
+
+                  </Pressable>
+
+                )}
+
+
+                {/* =================================
+                    PAID BUTTON
+                ================================= */}
+
+                <Pressable
+                  style={[
+                    styles.paidButton,
+
+                    record.paid &&
+                      styles.paidButtonActive,
+                  ]}
+                  onPress={() =>
+                    togglePaid(index)
+                  }
+                >
+
+                  <Text
+                    style={[
+                      styles.paidButtonText,
+
+                      record.paid &&
+                        styles.paidButtonTextActive,
+                    ]}
+                  >
+                    {record.paid
+                      ? '✓  PAID'
+                      : 'MARK AS PAID'}
+                  </Text>
+
+                </Pressable>
+
+
+                {/* =================================
+                    DELETE
+                ================================= */}
+
+                <Pressable
+                  style={
+                    styles.deleteButton
+                  }
+                  onPress={() =>
+                    deleteRecord(index)
+                  }
+                >
+
+                  <Text
+                    style={
+                      styles.deleteButtonText
+                    }
+                  >
+                    Delete Record
+                  </Text>
+
+                </Pressable>
+
+              </View>
+
+            );
+
+          }
+        )
+
+      )}
+
+    </ScrollView>
+  );
+}
+
+
+// ========================================
+// STYLES
+// ========================================
+
+const styles = StyleSheet.create({
+
+  // ========================================
+  // SCREEN
+  // ========================================
+
+  screen: {
+    flex: 1,
+    backgroundColor: '#FFF5F8',
+  },
+
+  container: {
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 40,
+  },
+
+
+  // ========================================
+  // HEADER
+  // ========================================
+
+  header: {
+    marginBottom: 22,
+  },
+
+  smallHeader: {
+    fontSize: 14,
+    color: '#9A6A7C',
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  gcashHeaderIcon: {
+    width: 55,
+    height: 55,
+    borderRadius: 17,
+
+    backgroundColor: '#E83E8C',
+
+    alignItems: 'center',
+    justifyContent: 'center',
+
+    marginRight: 14,
+  },
+
+  gcashHeaderIconText: {
+    fontSize: 27,
+    fontWeight: '900',
+    color: '#FFFFFF',
+  },
+
+  title: {
+    fontSize: 30,
+    fontWeight: '800',
+    color: '#7A123B',
+  },
+
+  subtitle: {
+    fontSize: 13,
+    color: '#9A6A7C',
+    marginTop: 2,
+  },
+
+
+  // ========================================
+  // TOTAL CARD
+  // ========================================
+
+  totalCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+
+    backgroundColor: '#C2185B',
+
+    borderRadius: 20,
+
+    padding: 18,
+
+    marginBottom: 14,
+
+    shadowColor: '#C2185B',
+    shadowOffset: {
+      width: 0,
+      height: 6,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+
+  totalIcon: {
+    width: 52,
+    height: 52,
+
+    borderRadius: 16,
+
+    backgroundColor: 'rgba(255,255,255,0.18)',
+
+    alignItems: 'center',
+    justifyContent: 'center',
+
+    marginRight: 14,
+  },
+
+  totalIconText: {
+    fontSize: 25,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+
+  totalInfo: {
+    flex: 1,
+  },
+
+  totalLabel: {
+    fontSize: 13,
+    color: '#FFDCE9',
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+
+  totalAmount: {
+    fontSize: 27,
+    fontWeight: '900',
+    color: '#FFFFFF',
+  },
+
+
+  // ========================================
+  // DELETE ALL
+  // ========================================
+
+  deleteAllButton: {
+    height: 48,
+
+    borderRadius: 13,
+
+    backgroundColor: '#FFE6EF',
+    borderWidth: 1,
+    borderColor: '#F4B8CD',
+
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+
+    marginBottom: 20,
+  },
+
+  deleteAllIcon: {
+    fontSize: 16,
+    marginRight: 7,
+  },
+
+  deleteAllButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#B01852',
+  },
+
+
+  // ========================================
+  // EMPTY STATE
+  // ========================================
+
+  emptyCard: {
+    backgroundColor: '#FFFFFF',
+
+    borderRadius: 20,
+
+    paddingVertical: 40,
+    paddingHorizontal: 25,
+
+    alignItems: 'center',
+
+    borderWidth: 1,
+    borderColor: '#F2D2DE',
+  },
+
+  emptyIcon: {
+    width: 65,
+    height: 65,
+
+    borderRadius: 20,
+
+    backgroundColor: '#FFE6EF',
+
+    alignItems: 'center',
+    justifyContent: 'center',
+
+    marginBottom: 15,
+  },
+
+  emptyIconText: {
+    fontSize: 30,
+    fontWeight: '900',
+    color: '#E83E8C',
+  },
+
+  emptyTitle: {
+    fontSize: 19,
+    fontWeight: '800',
+    color: '#57132D',
+    marginBottom: 5,
+  },
+
+  emptyText: {
+    fontSize: 13,
+    color: '#9A6A7C',
+    textAlign: 'center',
+  },
+
+
+  // ========================================
+  // RECORD CARD
+  // ========================================
+
+  recordCard: {
+    padding: 18,
+
+    marginBottom: 15,
+
+    borderRadius: 20,
+
+    backgroundColor: '#FFFFFF',
+
+    borderWidth: 1,
+    borderColor: '#F1D4DF',
+
+    shadowColor: '#7A123B',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+
+
+  // ========================================
+  // CARD HEADER
+  // ========================================
+
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  customerSection: {
+    flex: 1,
+  },
+
+  customerLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1,
+    color: '#B27A91',
+    marginBottom: 4,
+  },
+
+  customer: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#351620',
+  },
+
+  customerInput: {
+    height: 43,
+
+    borderWidth: 1,
+    borderColor: '#E83E8C',
+
+    borderRadius: 10,
+
+    fontSize: 18,
+    fontWeight: '700',
+
+    paddingHorizontal: 10,
+
+    color: '#351620',
+  },
+
+  gcashBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+
+    borderRadius: 8,
+
+    backgroundColor: '#FFE6EF',
+  },
+
+  gcashBadgeText: {
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+    color: '#C2185B',
+  },
+
+
+  // ========================================
+  // DIVIDER
+  // ========================================
+
+  divider: {
+    height: 1,
+    backgroundColor: '#F3E1E7',
+    marginVertical: 16,
+  },
+
+
+  // ========================================
+  // ORDERS
+  // ========================================
+
+  ordersLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1,
+    color: '#B27A91',
+    marginBottom: 10,
+  },
+
+  orderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+
+    paddingVertical: 8,
+
+    borderBottomWidth: 1,
+    borderBottomColor: '#F7EDF1',
+  },
+
+  orderLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  order: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#4A2733',
+    flexShrink: 1,
+  },
+
+  quantityText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#A56A80',
+    marginLeft: 7,
+  },
+
+  itemPrice: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#57132D',
+  },
+
+
+  // ========================================
+  // EDIT MODE
+  // ========================================
+
+  editOrderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 9,
+  },
+
+  itemNameInput: {
+    flex: 1,
+
+    height: 40,
+
+    borderWidth: 1,
+    borderColor: '#E8B5C9',
+
+    borderRadius: 9,
+
+    fontSize: 14,
+
+    paddingHorizontal: 9,
+
+    color: '#351620',
+
+    backgroundColor: '#FFF9FB',
+
+    marginRight: 7,
+  },
+
+  quantityInput: {
+    width: 52,
+    height: 40,
+
+    borderWidth: 1,
+    borderColor: '#E8B5C9',
+
+    borderRadius: 9,
+
+    textAlign: 'center',
+
+    fontSize: 15,
+
+    color: '#351620',
+
+    backgroundColor: '#FFF9FB',
+  },
+
+  xText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#9A6A7C',
+
+    marginHorizontal: 7,
+  },
+
+
+  // ========================================
+  // TOTAL
+  // ========================================
+
+  amountBox: {
+    marginTop: 16,
+
+    paddingTop: 14,
+
+    borderTopWidth: 1,
+    borderTopColor: '#F0DDE4',
+
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  amountLabel: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    color: '#9A6A7C',
+  },
+
+  amount: {
+    fontSize: 23,
+    fontWeight: '900',
+    color: '#C2185B',
+  },
+
+
+  // ========================================
+  // PAYMENT
+  // ========================================
+
+  payment: {
+    fontSize: 13,
+    marginTop: 8,
+    fontWeight: '600',
+    color: '#9A6A7C',
+  },
+
+
+  // ========================================
+  // UPDATE BUTTON
+  // ========================================
+
+  updateButton: {
+    marginTop: 16,
+
+    height: 45,
+
+    borderRadius: 11,
+
+    alignItems: 'center',
+    justifyContent: 'center',
+
+    flexDirection: 'row',
+
+    backgroundColor: '#FFF0F6',
+    borderWidth: 1,
+    borderColor: '#F2C4D5',
+  },
+
+  updateButtonIcon: {
+    fontSize: 17,
+    color: '#C2185B',
+    marginRight: 7,
+  },
+
+  updateButtonText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#C2185B',
+  },
+
+
+  // ========================================
+  // SAVE BUTTON
+  // ========================================
+
+  saveButton: {
+    marginTop: 16,
+
+    height: 45,
+
+    borderRadius: 11,
+
+    alignItems: 'center',
+    justifyContent: 'center',
+
+    flexDirection: 'row',
+
+    backgroundColor: '#C2185B',
+  },
+
+  saveButtonIcon: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    marginRight: 7,
+  },
+
+  saveButtonText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+
+
+  // ========================================
+  // PAID BUTTON
+  // ========================================
+
+  paidButton: {
+    marginTop: 9,
+
+    height: 45,
+
+    borderWidth: 1,
+    borderColor: '#D8A7BA',
+
+    borderRadius: 11,
+
+    alignItems: 'center',
+    justifyContent: 'center',
+
+    backgroundColor: '#FFFFFF',
+  },
+
+  paidButtonActive: {
+    backgroundColor: '#FCE4ED',
+    borderColor: '#E83E8C',
+  },
+
+  paidButtonText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#7F5264',
+  },
+
+  paidButtonTextActive: {
+    color: '#C2185B',
+  },
+
+
+  // ========================================
+  // DELETE
+  // ========================================
+
+  deleteButton: {
+    marginTop: 9,
+
+    height: 43,
+
+    borderRadius: 11,
+
+    alignItems: 'center',
+    justifyContent: 'center',
+
+    backgroundColor: '#FFF1F1',
+
+    borderWidth: 1,
+    borderColor: '#F1CACA',
+  },
+
+  deleteButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#C03939',
+  },
+
+  updateAllButton: {
+    height: 48,
+    borderRadius: 13,
+    backgroundColor: '#FCE4EC',
+    borderWidth: 1,
+    borderColor: '#F3A6BC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+
+  updateAllButtonText: {
+    fontSize: 14,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+    color: '#D81B60',
+  },
+
+});
