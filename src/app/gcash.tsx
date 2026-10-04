@@ -16,14 +16,14 @@ import { useFocusEffect } from 'expo-router';
 // ========================================
 
 const items = {
-  'beef cheese smash burger': {
+  'beef smash burger': {
     price: 70,
     aliases: [
       'burger',
       'beef burger',
-      'beef cheese burger',
-      'cheese burger',
-      'beef cheese smash burger',
+      'beef burger',
+      'burger',
+      'beef smash burger',
     ],
   },
 
