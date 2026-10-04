@@ -274,7 +274,34 @@ export default function GCashScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      let isMounted = true;
+
+      const loadRecords = async () => {
+        try {
+          const savedRecords =
+            await AsyncStorage.getItem('gcashRecords');
+
+          if (!isMounted) return;
+
+          if (savedRecords) {
+            setGcashRecords(JSON.parse(savedRecords));
+          } else {
+            setGcashRecords([]);
+          }
+
+        } catch (error) {
+          console.error(
+            'Error loading Cash records:',
+            error
+          );
+        }
+      };
+
       loadRecords();
+
+      return () => {
+        isMounted = false;
+      };
     }, [])
   );
 

@@ -508,7 +508,34 @@ export default function CashScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      let isMounted = true;
+
+      const loadRecords = async () => {
+        try {
+          const savedRecords =
+            await AsyncStorage.getItem('cashRecords');
+
+          if (!isMounted) return;
+
+          if (savedRecords) {
+            setCashRecords(JSON.parse(savedRecords));
+          } else {
+            setCashRecords([]);
+          }
+
+        } catch (error) {
+          console.error(
+            'Error loading Cash records:',
+            error
+          );
+        }
+      };
+
       loadRecords();
+
+      return () => {
+        isMounted = false;
+      };
     }, [])
   );
 
