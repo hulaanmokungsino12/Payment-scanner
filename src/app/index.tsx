@@ -61,7 +61,7 @@ export default function HomeScreen() {
       // ========================================
 
       const serverResponse = await fetch(
-        'http://192.168.0.106:3000/scan',
+        'https://payment-scanner.onrender.com/scan',
         {
           method: 'POST',
           headers: {
