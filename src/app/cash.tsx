@@ -12,7 +12,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from 'expo-router';
 
 // ========================================
-// ITEMS + ALIASES + PRICES
+// ITEMS + PRICES
 // ========================================
 
 const items = {
@@ -411,7 +411,6 @@ export default function CashScreen() {
   const [cashRecords, setCashRecords] =
     useState<any[]>([]);
 
-  // Track which record is being edited
   const [editingIndex, setEditingIndex] =
     useState<number | null>(null);
 

@@ -12,53 +12,145 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from 'expo-router';
 
 // ========================================
-// ITEMS + ALIASES + PRICES
+// OFFICIAL ITEMS + PRICES
+// Gemini normalizes customer wording
+// before it reaches the app.
 // ========================================
 
-const items = {
-  'beef smash burger': {
-    price: 70,
-    aliases: [
-      'burger',
-      'beef burger',
-      'beef burger',
-      'burger',
-      'beef smash burger',
-    ],
-  },
-
-  'puto': {
-    price: 12,
-    aliases: [
-      'puto with cheese',
-      'puto',
-      'putos',
-    ],
-  },
+const items: Record<string, number> = {
+  'beef smash burger': 70,
+  'beef cheese burger': 80,
+  'puto': 12,
+  'ube cheese champorado': 55,
+  'freshly baked tuna sushi': 80,
+  'baked tuna sushi combo': 115,
+  'beef nachos with veggies': 80,
+  'beef nachos combo': 95,
+  'cucumber lemonade': 25,
+  'pork mami overload': 65,
+  'pork mami overload with egg': 70,
+  'potato wedges': 45,
+  'beef smash burger with lemonade': 85,
+  'beef smash burger with potato wedges': 110,
+  'beef smash burger with potato wedges and lemonade': 120,
+  'lumpianada': 60,
+  'lumpianada combo': 75,
+  'seaweed': 20,
+  'combo': 115,
 };
+
 
 // ========================================
 // GET ITEM PRICE
+// Handles cheese modifier
 // ========================================
 
-const getItemPrice = (itemName: string) => {
-  const normalizedItem = itemName
-    .toLowerCase()
-    .trim();
+const getItemPrice = (
+  itemName: string,
+  cheese: boolean = false
+) => {
 
-  for (const item of Object.values(items)) {
-    if (
-      item.aliases.some(
-        (alias) =>
-          alias.toLowerCase().trim() === normalizedItem
-      )
-    ) {
-      return item.price;
-    }
+  const normalizedItem =
+    itemName
+      .toLowerCase()
+      .trim();
+
+  let price =
+    items[normalizedItem] || 0;
+
+
+  // ========================================
+  // CHEESE ADD-ON
+  // ========================================
+
+  if (
+    cheese &&
+    (
+      normalizedItem ===
+        'beef smash burger with lemonade' ||
+
+      normalizedItem ===
+        'beef smash burger with potato wedges'
+    )
+  ) {
+
+    price += 10;
+
   }
 
-  return 0;
+  return price;
 };
+
+
+// ========================================
+// GET ITEM TOTAL
+// Handles special Seaweed pricing
+// ========================================
+
+const getItemTotal = (
+  itemName: string,
+  quantity: number,
+  cheese: boolean = false
+) => {
+
+  const normalizedItem =
+    itemName
+      .toLowerCase()
+      .trim();
+
+
+  // ========================================
+  // SEAWEED SPECIAL PRICING
+  //
+  // 1 = ₱20
+  // 2 = ₱40
+  // 3 = ₱50
+  // 4 = ₱70
+  // 5 = ₱90
+  // 6 = ₱100
+  // ========================================
+
+  if (
+    normalizedItem === 'seaweed'
+  ) {
+
+    const safeQuantity =
+      Math.max(
+        0,
+        Number(quantity) || 0
+      );
+
+    const groupsOfThree =
+      Math.floor(
+        safeQuantity / 3
+      );
+
+    const remaining =
+      safeQuantity % 3;
+
+    return (
+      groupsOfThree * 50 +
+      remaining * 20
+    );
+  }
+
+
+  // ========================================
+  // NORMAL ITEMS
+  // ========================================
+
+  const price =
+    getItemPrice(
+      itemName,
+      cheese
+    );
+
+  return (
+    price *
+    (Number(quantity) || 0)
+  );
+};
+
 
 export default function GCashScreen() {
 
@@ -79,12 +171,17 @@ export default function GCashScreen() {
     newName: string
   ) => {
 
-    const updatedRecords = [...gcashRecords];
+    const updatedRecords =
+      [...gcashRecords];
 
-    updatedRecords[recordIndex].result.customer =
+    updatedRecords[
+      recordIndex
+    ].result.customer =
       newName;
 
-    setGcashRecords(updatedRecords);
+    setGcashRecords(
+      updatedRecords
+    );
   };
 
 
@@ -132,29 +229,40 @@ export default function GCashScreen() {
 
     let totalPaid = 0;
 
-    gcashRecords.forEach((record) => {
+    gcashRecords.forEach(
+      (record) => {
 
-      if (!record.paid) {
-        return;
-      }
-
-      record.result?.orders?.forEach(
-        (order: any) => {
-
-          const itemName =
-            order.item || '';
-
-          const price =
-            getItemPrice(itemName);
-
-          totalPaid +=
-            price *
-            (order.quantity || 0);
-
+        if (!record.paid) {
+          return;
         }
-      );
 
-    });
+        record.result?.orders?.forEach(
+          (order: any) => {
+
+            const itemName =
+              order.item || '';
+
+            const quantity =
+              order.quantity || 0;
+
+            const cheese =
+              order.cheese === true;
+
+            const itemTotal =
+              getItemTotal(
+                itemName,
+                quantity,
+                cheese
+              );
+
+            totalPaid +=
+              itemTotal;
+
+          }
+        );
+
+      }
+    );
 
     return totalPaid;
   };
@@ -217,6 +325,7 @@ export default function GCashScreen() {
         },
       ]
     );
+
   };
 
 
@@ -279,6 +388,7 @@ export default function GCashScreen() {
         },
       ]
     );
+
   };
 
 
@@ -295,12 +405,19 @@ export default function GCashScreen() {
       const updatedRecords =
         [...gcashRecords];
 
-      updatedRecords[indexToToggle] = {
-        ...updatedRecords[indexToToggle],
+      updatedRecords[
+        indexToToggle
+      ] = {
+
+        ...updatedRecords[
+          indexToToggle
+        ],
 
         paid:
-          !updatedRecords[indexToToggle]
-            .paid,
+          !updatedRecords[
+            indexToToggle
+          ].paid,
+
       };
 
       setGcashRecords(
@@ -342,11 +459,13 @@ export default function GCashScreen() {
       recordIndex
     ].result.orders[
       orderIndex
-    ].item = newItemName;
+    ].item =
+      newItemName;
 
     setGcashRecords(
       updatedRecords
     );
+
   };
 
 
@@ -381,24 +500,35 @@ export default function GCashScreen() {
     setGcashRecords(
       updatedRecords
     );
+
   };
+
 
   // ========================================
   // SAVE ALL UPDATED RECORD
   // ========================================
 
   const updateAll = async () => {
-    try {
-      const updatedRecords = gcashRecords.map((record) => ({
-        ...record,
-        paid: true,
-      }));
 
-      setGcashRecords(updatedRecords);
+    try {
+
+      const updatedRecords =
+        gcashRecords.map(
+          (record) => ({
+            ...record,
+            paid: true,
+          })
+        );
+
+      setGcashRecords(
+        updatedRecords
+      );
 
       await AsyncStorage.setItem(
         'gcashRecords',
-        JSON.stringify(updatedRecords)
+        JSON.stringify(
+          updatedRecords
+        )
       );
 
       Alert.alert(
@@ -409,12 +539,16 @@ export default function GCashScreen() {
       console.log(
         'All GCash records marked as paid'
       );
+
     } catch (error) {
+
       console.error(
         'Error marking all GCash records as paid:',
         error
       );
+
     }
+
   };
 
 
@@ -449,6 +583,7 @@ export default function GCashScreen() {
       );
 
     }
+
   };
 
 
@@ -479,12 +614,19 @@ export default function GCashScreen() {
         <View style={styles.titleRow}>
 
           <View style={styles.gcashHeaderIcon}>
-            <Text style={styles.gcashHeaderIconText}>
+
+            <Text
+              style={
+                styles.gcashHeaderIconText
+              }
+            >
               G
             </Text>
+
           </View>
 
           <View>
+
             <Text style={styles.title}>
               GCash
             </Text>
@@ -492,6 +634,7 @@ export default function GCashScreen() {
             <Text style={styles.subtitle}>
               GCash payment records
             </Text>
+
           </View>
 
         </View>
@@ -506,9 +649,11 @@ export default function GCashScreen() {
       <View style={styles.totalCard}>
 
         <View style={styles.totalIcon}>
+
           <Text style={styles.totalIconText}>
             ₱
           </Text>
+
         </View>
 
         <View style={styles.totalInfo}>
@@ -531,31 +676,54 @@ export default function GCashScreen() {
       ======================================== */}
 
       <Pressable
-        style={styles.deleteAllButton}
-        onPress={deleteAllRecords}
+        style={
+          styles.deleteAllButton
+        }
+        onPress={
+          deleteAllRecords
+        }
       >
 
-        <Text style={styles.deleteAllIcon}>
+        <Text
+          style={
+            styles.deleteAllIcon
+          }
+        >
           🗑
         </Text>
 
-        <Text style={styles.deleteAllButtonText}>
+        <Text
+          style={
+            styles.deleteAllButtonText
+          }
+        >
           Delete All Records
         </Text>
 
       </Pressable>
 
+
       {/* ========================================
-                UPDATE ALL
+          UPDATE ALL
       ======================================== */}
 
       <Pressable
-        style={styles.updateAllButton}
-        onPress={updateAll}
+        style={
+          styles.updateAllButton
+        }
+        onPress={
+          updateAll
+        }
       >
-        <Text style={styles.updateAllButtonText}>
+
+        <Text
+          style={
+            styles.updateAllButtonText
+          }
+        >
           UPDATE ALL
         </Text>
+
       </Pressable>
 
 
@@ -565,19 +733,41 @@ export default function GCashScreen() {
 
       {gcashRecords.length === 0 ? (
 
-        <View style={styles.emptyCard}>
+        <View
+          style={
+            styles.emptyCard
+          }
+        >
 
-          <View style={styles.emptyIcon}>
-            <Text style={styles.emptyIconText}>
+          <View
+            style={
+              styles.emptyIcon
+            }
+          >
+
+            <Text
+              style={
+                styles.emptyIconText
+              }
+            >
               G
             </Text>
+
           </View>
 
-          <Text style={styles.emptyTitle}>
+          <Text
+            style={
+              styles.emptyTitle
+            }
+          >
             No GCash Records
           </Text>
 
-          <Text style={styles.emptyText}>
+          <Text
+            style={
+              styles.emptyText
+            }
+          >
             Scanned GCash orders will appear here.
           </Text>
 
@@ -586,7 +776,10 @@ export default function GCashScreen() {
       ) : (
 
         gcashRecords.map(
-          (record, index) => {
+          (
+            record,
+            index
+          ) => {
 
             let total = 0;
 
@@ -594,51 +787,82 @@ export default function GCashScreen() {
 
               <View
                 key={index}
-                style={styles.recordCard}
+                style={
+                  styles.recordCard
+                }
               >
 
                 {/* =================================
                     CARD HEADER
                 ================================= */}
 
-                <View style={styles.cardHeader}>
+                <View
+                  style={
+                    styles.cardHeader
+                  }
+                >
 
-                  <View style={styles.customerSection}>
+                  <View
+                    style={
+                      styles.customerSection
+                    }
+                  >
 
-                    <Text style={styles.customerLabel}>
+                    <Text
+                      style={
+                        styles.customerLabel
+                      }
+                    >
                       CUSTOMER
                     </Text>
 
                     {editingIndex === index ? (
 
                       <TextInput
-                        style={styles.customerInput}
+                        style={
+                          styles.customerInput
+                        }
                         value={
                           record.result?.customer ||
                           ''
                         }
-                        onChangeText={(text) =>
-                          updateCustomerName(
-                            index,
-                            text
-                          )
+                        onChangeText={
+                          (text) =>
+                            updateCustomerName(
+                              index,
+                              text
+                            )
                         }
                       />
 
                     ) : (
 
-                      <Text style={styles.customer}>
-                        {record.result?.customer ||
-                          'Unknown Customer'}
+                      <Text
+                        style={
+                          styles.customer
+                        }
+                      >
+                        {
+                          record.result?.customer ||
+                          'Unknown Customer'
+                        }
                       </Text>
 
                     )}
 
                   </View>
 
-                  <View style={styles.gcashBadge}>
+                  <View
+                    style={
+                      styles.gcashBadge
+                    }
+                  >
 
-                    <Text style={styles.gcashBadgeText}>
+                    <Text
+                      style={
+                        styles.gcashBadgeText
+                      }
+                    >
                       GCASH
                     </Text>
 
@@ -651,14 +875,22 @@ export default function GCashScreen() {
                     DIVIDER
                 ================================= */}
 
-                <View style={styles.divider} />
+                <View
+                  style={
+                    styles.divider
+                  }
+                />
 
 
                 {/* =================================
                     ORDERS
                 ================================= */}
 
-                <Text style={styles.ordersLabel}>
+                <Text
+                  style={
+                    styles.ordersLabel
+                  }
+                >
                   ORDER
                 </Text>
 
@@ -671,16 +903,27 @@ export default function GCashScreen() {
                     const itemName =
                       order.item || '';
 
+                    const quantity =
+                      order.quantity || 0;
+
+                    const cheese =
+                      order.cheese === true;
+
                     const price =
                       getItemPrice(
-                        itemName
+                        itemName,
+                        cheese
                       );
 
                     const itemTotal =
-                      price *
-                      (order.quantity || 0);
+                      getItemTotal(
+                        itemName,
+                        quantity,
+                        cheese
+                      );
 
-                    total += itemTotal;
+                    total +=
+                      itemTotal;
 
 
                     // =================================
@@ -707,12 +950,13 @@ export default function GCashScreen() {
                             value={
                               order.item || ''
                             }
-                            onChangeText={(text) =>
-                              updateItemName(
-                                index,
-                                orderIndex,
-                                text
-                              )
+                            onChangeText={
+                              (text) =>
+                                updateItemName(
+                                  index,
+                                  orderIndex,
+                                  text
+                                )
                             }
                           />
 
@@ -720,21 +964,26 @@ export default function GCashScreen() {
                             style={
                               styles.quantityInput
                             }
-                            value={String(
-                              order.quantity
-                            )}
-                            keyboardType="numeric"
-                            onChangeText={(text) =>
-                              updateQuantity(
-                                index,
-                                orderIndex,
-                                text
+                            value={
+                              String(
+                                order.quantity
                               )
+                            }
+                            keyboardType="numeric"
+                            onChangeText={
+                              (text) =>
+                                updateQuantity(
+                                  index,
+                                  orderIndex,
+                                  text
+                                )
                             }
                           />
 
                           <Text
-                            style={styles.xText}
+                            style={
+                              styles.xText
+                            }
                           >
                             x
                           </Text>
@@ -750,6 +999,7 @@ export default function GCashScreen() {
                         </View>
 
                       );
+
                     }
 
 
@@ -761,10 +1011,16 @@ export default function GCashScreen() {
 
                       <View
                         key={orderIndex}
-                        style={styles.orderRow}
+                        style={
+                          styles.orderRow
+                        }
                       >
 
-                        <View style={styles.orderLeft}>
+                        <View
+                          style={
+                            styles.orderLeft
+                          }
+                        >
 
                           <Text
                             style={
@@ -772,6 +1028,16 @@ export default function GCashScreen() {
                             }
                           >
                             {itemName}
+
+                            {cheese &&
+                              (
+                                itemName.toLowerCase().trim() ===
+                                  'beef smash burger with lemonade' ||
+                                itemName.toLowerCase().trim() ===
+                                  'beef smash burger with potato wedges'
+                              )
+                              ? ' + Cheese'
+                              : ''}
                           </Text>
 
                           <Text
@@ -779,7 +1045,7 @@ export default function GCashScreen() {
                               styles.quantityText
                             }
                           >
-                            x{order.quantity}
+                            x{quantity}
                           </Text>
 
                         </View>
@@ -804,13 +1070,25 @@ export default function GCashScreen() {
                     TOTAL
                 ================================= */}
 
-                <View style={styles.amountBox}>
+                <View
+                  style={
+                    styles.amountBox
+                  }
+                >
 
-                  <Text style={styles.amountLabel}>
+                  <Text
+                    style={
+                      styles.amountLabel
+                    }
+                  >
                     TOTAL
                   </Text>
 
-                  <Text style={styles.amount}>
+                  <Text
+                    style={
+                      styles.amount
+                    }
+                  >
                     ₱{total}
                   </Text>
 
@@ -821,8 +1099,16 @@ export default function GCashScreen() {
                     PAYMENT
                 ================================= */}
 
-                <Text style={styles.payment}>
-                  Payment: {record.result?.payment || 'GCash'}
+                <Text
+                  style={
+                    styles.payment
+                  }
+                >
+                  Payment:{' '}
+                  {
+                    record.result?.payment ||
+                    'GCash'
+                  }
                 </Text>
 
 
@@ -833,17 +1119,27 @@ export default function GCashScreen() {
                 {editingIndex === index ? (
 
                   <Pressable
-                    style={styles.saveButton}
+                    style={
+                      styles.saveButton
+                    }
                     onPress={() =>
                       saveUpdate(index)
                     }
                   >
 
-                    <Text style={styles.saveButtonIcon}>
+                    <Text
+                      style={
+                        styles.saveButtonIcon
+                      }
+                    >
                       ✓
                     </Text>
 
-                    <Text style={styles.saveButtonText}>
+                    <Text
+                      style={
+                        styles.saveButtonText
+                      }
+                    >
                       Save Update
                     </Text>
 
@@ -852,17 +1148,27 @@ export default function GCashScreen() {
                 ) : (
 
                   <Pressable
-                    style={styles.updateButton}
+                    style={
+                      styles.updateButton
+                    }
                     onPress={() =>
                       setEditingIndex(index)
                     }
                   >
 
-                    <Text style={styles.updateButtonIcon}>
+                    <Text
+                      style={
+                        styles.updateButtonIcon
+                      }
+                    >
                       ✎
                     </Text>
 
-                    <Text style={styles.updateButtonText}>
+                    <Text
+                      style={
+                        styles.updateButtonText
+                      }
+                    >
                       Update Order
                     </Text>
 
@@ -946,10 +1252,6 @@ export default function GCashScreen() {
 
 const styles = StyleSheet.create({
 
-  // ========================================
-  // SCREEN
-  // ========================================
-
   screen: {
     flex: 1,
     backgroundColor: '#FFF5F8',
@@ -960,7 +1262,6 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 40,
   },
-
 
   // ========================================
   // HEADER
@@ -1012,7 +1313,6 @@ const styles = StyleSheet.create({
     color: '#9A6A7C',
     marginTop: 2,
   },
-
 
   // ========================================
   // TOTAL CARD
@@ -1077,7 +1377,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 
-
   // ========================================
   // DELETE ALL
   // ========================================
@@ -1108,7 +1407,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#B01852',
   },
-
 
   // ========================================
   // EMPTY STATE
@@ -1161,7 +1459,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-
   // ========================================
   // RECORD CARD
   // ========================================
@@ -1187,7 +1484,6 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 2,
   },
-
 
   // ========================================
   // CARD HEADER
@@ -1248,7 +1544,6 @@ const styles = StyleSheet.create({
     color: '#C2185B',
   },
 
-
   // ========================================
   // DIVIDER
   // ========================================
@@ -1258,7 +1553,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3E1E7',
     marginVertical: 16,
   },
-
 
   // ========================================
   // ORDERS
@@ -1308,7 +1602,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#57132D',
   },
-
 
   // ========================================
   // EDIT MODE
@@ -1367,7 +1660,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 7,
   },
 
-
   // ========================================
   // TOTAL
   // ========================================
@@ -1398,7 +1690,6 @@ const styles = StyleSheet.create({
     color: '#C2185B',
   },
 
-
   // ========================================
   // PAYMENT
   // ========================================
@@ -1409,7 +1700,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#9A6A7C',
   },
-
 
   // ========================================
   // UPDATE BUTTON
@@ -1444,7 +1734,6 @@ const styles = StyleSheet.create({
     color: '#C2185B',
   },
 
-
   // ========================================
   // SAVE BUTTON
   // ========================================
@@ -1476,7 +1765,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#FFFFFF',
   },
-
 
   // ========================================
   // PAID BUTTON
@@ -1513,7 +1801,6 @@ const styles = StyleSheet.create({
     color: '#C2185B',
   },
 
-
   // ========================================
   // DELETE
   // ========================================
@@ -1539,6 +1826,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#C03939',
   },
+
+  // ========================================
+  // UPDATE ALL
+  // ========================================
 
   updateAllButton: {
     height: 48,
