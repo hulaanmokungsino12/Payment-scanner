@@ -12,264 +12,89 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from 'expo-router';
 
 // ========================================
-// ITEMS + PRICES
+// OFFICIAL ITEMS + PRICES
+// Gemini normalizes customer wording
+// before it reaches the app.
 // ========================================
 
-const items = {
-
-  // ========================================
-  // BURGERS
-  // ========================================
-
-  'beef smash burger': {
-    price: 70,
-    aliases: [
-      'beef smash burger',
-      'beef burger',
-      'smash burger',
-      'burger',
-    ],
-  },
-
-  'beef cheese burger': {
-    price: 80,
-    aliases: [
-      'beef cheese burger',
-      'beef cheeseburger',
-      'cheese burger',
-    ],
-  },
-
-  'beef smash burger with lemonade': {
-    price: 85,
-    aliases: [
-      'beef smash burger with lemonade',
-      'beef smash burger lemonade',
-      'smash burger with lemonade',
-    ],
-  },
-
-  'beef smash burger with potato wedges': {
-    price: 110,
-    aliases: [
-      'beef smash burger with potato wedges',
-      'beef smash burger and potato wedges',
-      'smash burger with potato wedges',
-    ],
-  },
-
-  'beef smash burger with potato wedges and lemonade': {
-    price: 120,
-    aliases: [
-      'beef smash burger with potato wedges and lemonade',
-      'beef smash burger potato wedges lemonade',
-      'smash burger potato wedges lemonade',
-    ],
-  },
-
-
-  // ========================================
-  // PUTO
-  // ========================================
-
-  'puto': {
-    price: 12,
-    aliases: [
-      'puto',
-      'putos',
-      'puto with cheese',
-    ],
-  },
-
-
-  // ========================================
-  // CHAMPORADO
-  // ========================================
-
-  'ube cheese champorado': {
-    price: 55,
-    aliases: [
-      'ube cheese champorado',
-      'ube champorado',
-      'cheese champorado',
-    ],
-  },
-
-
-  // ========================================
-  // BAKED TUNA SUSHI
-  // ========================================
-
-  'freshly baked tuna sushi': {
-    price: 80,
-    aliases: [
-      'freshly baked tuna sushi',
-      'baked tuna sushi',
-      'fresh baked tuna sushi',
-      'tuna sushi',
-    ],
-  },
-
-  'baked tuna sushi combo': {
-    price: 115,
-    aliases: [
-      'baked tuna sushi combo',
-      'tuna sushi combo',
-    ],
-  },
-
-
-  // ========================================
-  // NACHOS
-  // ========================================
-
-  'beef nachos with veggies': {
-    price: 80,
-    aliases: [
-      'beef nachos with veggies',
-      'beef nachos with vegetables',
-      'beef nachos veggies',
-      'beef nachos',
-    ],
-  },
-
-  'beef nachos combo': {
-    price: 95,
-    aliases: [
-      'beef nachos combo',
-      'nachos combo',
-    ],
-  },
-
-
-  // ========================================
-  // DRINKS
-  // ========================================
-
-  'cucumber lemonade': {
-    price: 25,
-    aliases: [
-      'cucumber lemonade',
-      'cucumber lemon',
-      'cucumber drink',
-      'lemonade',
-    ],
-  },
-
-
-  // ========================================
-  // MAMI
-  // ========================================
-
-  'pork mami overload': {
-    price: 65,
-    aliases: [
-      'pork mami overload',
-      'pork mami',
-      'mami overload',
-    ],
-  },
-
-  'pork mami overload with egg': {
-    price: 70,
-    aliases: [
-      'pork mami overload with egg',
-      'pork mami with egg',
-      'mami overload with egg',
-    ],
-  },
-
-
-  // ========================================
-  // POTATO WEDGES
-  // ========================================
-
-  'potato wedges': {
-    price: 45,
-    aliases: [
-      'potato wedges',
-      'potato wedge',
-      'wedges',
-    ],
-  },
-
-
-  // ========================================
-  // LUMPIANADA
-  // ========================================
-
-  'lumpianada': {
-    price: 60,
-    aliases: [
-      'lumpianada',
-      'lumpia nada',
-    ],
-  },
-
-  'lumpianada combo': {
-    price: 75,
-    aliases: [
-      'lumpianada combo',
-      'lumpianada and cucumber lemonade',
-      'lumpianada with cucumber lemonade',
-    ],
-  },
-
-
-  // ========================================
-  // SEAWEED
-  // ========================================
-
-  'seaweed': {
-    price: 20,
-    aliases: [
-      'seaweed',
-      'seaweed pack',
-    ],
-  },
-
-
-  // ========================================
-  // SPECIAL COMBO
-  // ========================================
-
-  'baked sushi seaweed cucumber lemonade combo': {
-    price: 115,
-    aliases: [
-      'baked sushi seaweed cucumber lemonade combo',
-      'baked sushi seaweed lemonade combo',
-      'baked sushi seaweed cucumber lemonade',
-      '1 tub baked sushi 1 seaweed 1 cucumber lemonade',
-      '1 tub of baked sushi 1 seaweed 1 cucumber lemonade',
-    ],
-  },
-
+const items: Record<string, number> = {
+  'beef smash burger': 70,
+  'beef cheese burger': 80,
+  'puto': 12,
+  'ube cheese champorado': 55,
+  'freshly baked tuna sushi': 80,
+  'baked tuna sushi combo': 115,
+  'beef nachos with veggies': 80,
+  'beef nachos combo': 95,
+  'cucumber lemonade': 25,
+  'pork mami overload': 65,
+  'pork mami overload with egg': 70,
+  'potato wedges': 45,
+  'beef smash burger with lemonade': 85,
+  'beef smash burger with potato wedges': 110,
+  'beef smash burger with potato wedges and lemonade': 120,
+  'lumpianada': 60,
+  'lumpianada combo': 75,
+  'seaweed': 20,
+  'combo': 115,
 };
-
-
-// ========================================
-// NORMALIZE ITEM NAME
-// ========================================
-
-const normalizeItemName = (itemName: string) => {
-  return itemName
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, ' ');
-};
-
 
 // ========================================
 // GET ITEM PRICE
+// Handles cheese modifier
 // ========================================
 
 const getItemPrice = (
   itemName: string,
-  quantity: number = 1
+  cheese: boolean = false
 ) => {
 
   const normalizedItem =
-    normalizeItemName(itemName);
+    itemName
+      .toLowerCase()
+      .trim();
+
+  let price =
+    items[normalizedItem] || 0;
+
+
+  // ========================================
+  // CHEESE ADD-ON
+  // ========================================
+
+  if (
+    cheese &&
+    (
+      normalizedItem ===
+        'beef smash burger with lemonade' ||
+
+      normalizedItem ===
+        'beef smash burger with potato wedges'
+    )
+  ) {
+
+    price += 10;
+
+  }
+
+  return price;
+};
+
+// ========================================
+// GET ITEM TOTAL
+// Handles special Seaweed pricing
+// ========================================
+
+const getItemTotal = (
+  itemName: string,
+  quantity: number,
+  cheese: boolean = false
+) => {
+
+  const normalizedItem =
+    itemName
+      .toLowerCase()
+      .trim();
 
 
   // ========================================
@@ -284,127 +109,45 @@ const getItemPrice = (
   // ========================================
 
   if (
-    normalizedItem === 'seaweed' ||
-    normalizedItem === 'seaweed pack'
+    normalizedItem === 'seaweed'
   ) {
 
-    const bundles =
-      Math.floor(quantity / 3);
+    const safeQuantity =
+      Math.max(
+        0,
+        Number(quantity) || 0
+      );
+
+    const groupsOfThree =
+      Math.floor(
+        safeQuantity / 3
+      );
 
     const remaining =
-      quantity % 3;
+      safeQuantity % 3;
 
     return (
-      (bundles * 50) +
-      (remaining * 20)
+      groupsOfThree * 50 +
+      remaining * 20
     );
   }
 
 
   // ========================================
-  // CHEESE DETECTION
+  // NORMAL ITEMS
   // ========================================
 
-  const hasCheese =
-    normalizedItem.includes('with cheese') ||
-    normalizedItem.includes('cheese');
+  const price =
+    getItemPrice(
+      itemName,
+      cheese
+    );
 
-
-  // ========================================
-  // FIND ITEM
-  // ========================================
-
-  for (const item of Object.values(items)) {
-
-    const matched =
-      item.aliases.some(
-        (alias) =>
-          normalizeItemName(alias) ===
-          normalizedItem
-      );
-
-    if (matched) {
-
-      let price = item.price;
-
-
-      // ========================================
-      // CHEESE ADD-ON
-      //
-      // Only these two combinations
-      // have the +₱10 cheese option.
-      // ========================================
-
-      if (
-        hasCheese &&
-        (
-          normalizedItem.includes(
-            'beef smash burger with lemonade'
-          ) ||
-          normalizedItem.includes(
-            'beef smash burger with potato wedges'
-          )
-        )
-      ) {
-
-        price += 10;
-      }
-
-
-      return price;
-    }
-  }
-
-
-  // ========================================
-  // HANDLE CHEESE MODIFIER SEPARATELY
-  //
-  // Example:
-  // "beef smash burger with lemonade with cheese"
-  // ========================================
-
-  if (
-    normalizedItem.includes(
-      'beef smash burger with lemonade'
-    ) &&
-    hasCheese
-  ) {
-    return 95;
-  }
-
-
-  if (
-    normalizedItem.includes(
-      'beef smash burger with potato wedges'
-    ) &&
-    hasCheese
-  ) {
-    return 120;
-  }
-
-
-  return 0;
-};
-
-
-// ========================================
-// GET TOTAL FOR ORDER
-// ========================================
-
-const getOrderTotal = (order: any) => {
-
-  const itemName =
-    order.item || '';
-
-  const quantity =
-    Number(order.quantity) || 0;
-
-  return getItemPrice(
-    itemName,
-    quantity
+  return (
+    price *
+    (Number(quantity) || 0)
   );
 };
-
 
 export default function CashScreen() {
 
@@ -481,22 +224,40 @@ export default function CashScreen() {
 
     let totalPaid = 0;
 
-    cashRecords.forEach((record) => {
+    cashRecords.forEach(
+      (record) => {
 
-      if (!record.paid) {
-        return;
-      }
-
-      record.result?.orders?.forEach(
-        (order: any) => {
-
-          totalPaid +=
-            getOrderTotal(order);
-
+        if (!record.paid) {
+          return;
         }
-      );
 
-    });
+        record.result?.orders?.forEach(
+          (order: any) => {
+
+            const itemName =
+              order.item || '';
+
+            const quantity =
+              order.quantity || 0;
+
+            const cheese =
+              order.cheese === true;
+
+            const itemTotal =
+              getItemTotal(
+                itemName,
+                quantity,
+                cheese
+              );
+
+            totalPaid +=
+              itemTotal;
+
+          }
+        );
+
+      }
+    );
 
     return totalPaid;
   };
@@ -949,7 +710,7 @@ export default function CashScreen() {
       >
 
         <Text style={styles.updateAllButtonText}>
-          UPDATE ALL
+          ALL PAID
         </Text>
 
       </Pressable>
@@ -1073,10 +834,23 @@ export default function CashScreen() {
                       order.item || '';
 
                     const quantity =
-                      Number(order.quantity) || 0;
+                      order.quantity || 0;
+
+                    const cheese =
+                      order.cheese === true;
+
+                    const price =
+                      getItemPrice(
+                        itemName,
+                        cheese
+                      );
 
                     const itemTotal =
-                      getOrderTotal(order);
+                      getItemTotal(
+                        itemName,
+                        quantity,
+                        cheese
+                      );
 
                     total += itemTotal;
 
@@ -1144,14 +918,7 @@ export default function CashScreen() {
                               styles.itemPrice
                             }
                           >
-                            ₱{
-                              quantity > 0
-                                ? Math.round(
-                                    itemTotal /
-                                    quantity
-                                  )
-                                : 0
-                            }
+                            ₱{price}
                           </Text>
 
                         </View>
@@ -1180,6 +947,16 @@ export default function CashScreen() {
                             }
                           >
                             {itemName}
+
+                            {cheese &&
+                              (
+                                itemName.toLowerCase().trim() ===
+                                  'beef smash burger with lemonade' ||
+                                itemName.toLowerCase().trim() ===
+                                  'beef smash burger with potato wedges'
+                              )
+                              ? ' + Cheese'
+                              : ''}
                           </Text>
 
                           <Text

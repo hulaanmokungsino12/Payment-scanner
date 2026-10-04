@@ -748,7 +748,7 @@ export default function GCashScreen() {
             styles.updateAllButtonText
           }
         >
-          UPDATE ALL
+          ALL PAID
         </Text>
 
       </Pressable>

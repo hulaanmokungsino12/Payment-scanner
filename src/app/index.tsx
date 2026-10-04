@@ -19,6 +19,7 @@ export default function HomeScreen() {
   const [scanComplete, setScanComplete] = useState(false);
 
   const scanOrder = async () => {
+
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ['images'],
       quality: 1,
@@ -30,7 +31,10 @@ export default function HomeScreen() {
 
     const imageUri = result.assets[0].uri;
 
-    console.log('Captured image:', imageUri);
+    console.log(
+      'Captured image:',
+      imageUri
+    );
 
     // ========================================
     // START SCANNING
@@ -40,11 +44,16 @@ export default function HomeScreen() {
     setScanComplete(false);
 
     try {
+
       const file = new File(imageUri);
 
-      console.log('File URI:', file.uri);
+      console.log(
+        'File URI:',
+        file.uri
+      );
 
-      const base64data = await file.base64();
+      const base64data =
+        await file.base64();
 
       console.log(
         'Base64 length:',
@@ -56,37 +65,51 @@ export default function HomeScreen() {
         base64data.substring(0, 30)
       );
 
+
       // ========================================
       // SEND IMAGE TO SERVER
       // ========================================
 
-      const serverResponse = await fetch(
-        'https://payment-scanner.onrender.com/scan',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            image: base64data,
-          }),
-        }
-      );
+      const serverResponse =
+        await fetch(
+          'https://payment-scanner.onrender.com/scan',
+          {
+            method: 'POST',
 
-      const data = await serverResponse.json();
+            headers: {
+              'Content-Type':
+                'application/json',
+            },
+
+            body: JSON.stringify({
+              image: base64data,
+            }),
+          }
+        );
+
+
+      const data =
+        await serverResponse.json();
 
       console.log(
         'Server response:',
-        JSON.stringify(data, null, 2)
+        JSON.stringify(
+          data,
+          null,
+          2
+        )
       );
+
 
       // ========================================
       // GET ALL CUSTOMERS
       // ========================================
 
-      const customers = data.result;
+      const customers =
+        data.result;
 
       if (!Array.isArray(customers)) {
+
         console.error(
           'Invalid Gemini response:',
           customers
@@ -102,28 +125,50 @@ export default function HomeScreen() {
         return;
       }
 
+
       console.log(
         'Customers detected:',
         customers.length
       );
+
 
       // ========================================
       // LOAD EXISTING RECORDS
       // ========================================
 
       const existingGcash =
-        await AsyncStorage.getItem('gcashRecords');
+        await AsyncStorage.getItem(
+          'gcashRecords'
+        );
 
       const existingCash =
-        await AsyncStorage.getItem('cashRecords');
+        await AsyncStorage.getItem(
+          'cashRecords'
+        );
 
-      const gcashRecords = existingGcash
-        ? JSON.parse(existingGcash)
-        : [];
+      const existingUnknown =
+        await AsyncStorage.getItem(
+          'unknownRecords'
+        );
 
-      const cashRecords = existingCash
-        ? JSON.parse(existingCash)
-        : [];
+
+      const gcashRecords =
+        existingGcash
+          ? JSON.parse(existingGcash)
+          : [];
+
+
+      const cashRecords =
+        existingCash
+          ? JSON.parse(existingCash)
+          : [];
+
+
+      const unknownRecords =
+        existingUnknown
+          ? JSON.parse(existingUnknown)
+          : [];
+
 
       // ========================================
       // PROCESS EVERY CUSTOMER
@@ -131,11 +176,19 @@ export default function HomeScreen() {
 
       let gcashCount = 0;
       let cashCount = 0;
+      let unknownCount = 0;
 
-      for (const customer of customers) {
+
+      for (
+        const customer
+        of customers
+      ) {
 
         const paymentMethod =
-          customer.payment?.toLowerCase().trim();
+          customer.payment
+            ?.toLowerCase()
+            .trim();
+
 
         console.log(
           'Customer:',
@@ -147,18 +200,27 @@ export default function HomeScreen() {
           customer.payment
         );
 
+
         // ========================================
         // GCASH
         // ========================================
 
-        if (paymentMethod === 'gcash') {
+        if (
+          paymentMethod === 'gcash'
+        ) {
 
           gcashRecords.push({
-            result: customer,
-            paid: false,
+
+            result:
+              customer,
+
+            paid:
+              false,
+
           });
 
           gcashCount++;
+
 
           console.log(
             `GCash record added: ${customer.customer}`
@@ -166,18 +228,27 @@ export default function HomeScreen() {
 
         }
 
+
         // ========================================
         // CASH
         // ========================================
 
-        else if (paymentMethod === 'cash') {
+        else if (
+          paymentMethod === 'cash'
+        ) {
 
           cashRecords.push({
-            result: customer,
-            paid: false,
+
+            result:
+              customer,
+
+            paid:
+              false,
+
           });
 
           cashCount++;
+
 
           console.log(
             `Cash record added: ${customer.customer}`
@@ -185,21 +256,39 @@ export default function HomeScreen() {
 
         }
 
+
         // ========================================
         // UNKNOWN PAYMENT
         // ========================================
 
         else {
 
+          unknownRecords.push({
+
+            result:
+              customer,
+
+            paid:
+              false,
+
+          });
+
+          unknownCount++;
+
+
           console.log(
-            'Unknown payment method:',
-            customer.payment,
-            'for customer:',
-            customer.customer
+            `Unknown payment record added: ${customer.customer}`
+          );
+
+          console.log(
+            'Unknown payment value:',
+            customer.payment
           );
 
         }
+
       }
+
 
       // ========================================
       // SAVE GCASH RECORDS
@@ -207,8 +296,11 @@ export default function HomeScreen() {
 
       await AsyncStorage.setItem(
         'gcashRecords',
-        JSON.stringify(gcashRecords)
+        JSON.stringify(
+          gcashRecords
+        )
       );
+
 
       // ========================================
       // SAVE CASH RECORDS
@@ -216,8 +308,23 @@ export default function HomeScreen() {
 
       await AsyncStorage.setItem(
         'cashRecords',
-        JSON.stringify(cashRecords)
+        JSON.stringify(
+          cashRecords
+        )
       );
+
+
+      // ========================================
+      // SAVE UNKNOWN RECORDS
+      // ========================================
+
+      await AsyncStorage.setItem(
+        'unknownRecords',
+        JSON.stringify(
+          unknownRecords
+        )
+      );
+
 
       // ========================================
       // LOG RESULTS
@@ -231,6 +338,11 @@ export default function HomeScreen() {
         `Added ${cashCount} Cash record(s)`
       );
 
+      console.log(
+        `Added ${unknownCount} Unknown record(s)`
+      );
+
+
       // ========================================
       // SCANNING COMPLETE
       // ========================================
@@ -238,8 +350,11 @@ export default function HomeScreen() {
       setScanning(false);
       setScanComplete(true);
 
+
       setTimeout(() => {
+
         setScanComplete(false);
+
       }, 1500);
 
     } catch (error) {
@@ -255,29 +370,54 @@ export default function HomeScreen() {
         'Scan Error',
         'Something went wrong while scanning the order.'
       );
+
     }
+
   };
 
 
   return (
-    <View style={styles.container}>
+
+    <View
+      style={
+        styles.container
+      }
+    >
 
       {/* ========================================
           HEADER
       ======================================== */}
 
-      <View style={styles.header}>
-        <Text style={styles.welcomeText}>
+      <View
+        style={
+          styles.header
+        }
+      >
+
+        <Text
+          style={
+            styles.welcomeText
+          }
+        >
           Welcome to
         </Text>
 
-        <Text style={styles.title}>
+        <Text
+          style={
+            styles.title
+          }
+        >
           The Crisostomos
         </Text>
 
-        <Text style={styles.subtitle}>
+        <Text
+          style={
+            styles.subtitle
+          }
+        >
           Manage your orders with ease
         </Text>
+
       </View>
 
 
@@ -286,28 +426,62 @@ export default function HomeScreen() {
       ======================================== */}
 
       <TouchableOpacity
-        style={styles.scanCard}
-        onPress={scanOrder}
+        style={
+          styles.scanCard
+        }
+        onPress={
+          scanOrder
+        }
         activeOpacity={0.85}
       >
 
-        <View style={styles.scanIconContainer}>
-          <Text style={styles.scanIcon}>
+        <View
+          style={
+            styles.scanIconContainer
+          }
+        >
+
+          <Text
+            style={
+              styles.scanIcon
+            }
+          >
             📷
           </Text>
+
         </View>
 
-        <View style={styles.scanContent}>
-          <Text style={styles.scanCardTitle}>
+
+        <View
+          style={
+            styles.scanContent
+          }
+        >
+
+          <Text
+            style={
+              styles.scanCardTitle
+            }
+          >
             Scan Order
           </Text>
 
-          <Text style={styles.scanCardSubtitle}>
+          <Text
+            style={
+              styles.scanCardSubtitle
+            }
+          >
             Take a photo of an order to process it
           </Text>
+
         </View>
 
-        <Text style={styles.arrow}>
+
+        <Text
+          style={
+            styles.arrow
+          }
+        >
           ›
         </Text>
 
@@ -318,14 +492,28 @@ export default function HomeScreen() {
           PAYMENT RECORDS
       ======================================== */}
 
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>
+      <View
+        style={
+          styles.sectionHeader
+        }
+      >
+
+        <Text
+          style={
+            styles.sectionTitle
+          }
+        >
           Payment Records
         </Text>
 
-        <Text style={styles.sectionSubtitle}>
+        <Text
+          style={
+            styles.sectionSubtitle
+          }
+        >
           View and manage your orders
         </Text>
+
       </View>
 
 
@@ -333,16 +521,25 @@ export default function HomeScreen() {
           PAYMENT BUTTONS
       ======================================== */}
 
-      <View style={styles.paymentContainer}>
+      <View
+        style={
+          styles.paymentContainer
+        }
+      >
 
-        {/* GCASH */}
+
+        {/* ========================================
+            GCASH
+        ======================================== */}
 
         <TouchableOpacity
           style={[
             styles.paymentCard,
             styles.gcashCard,
           ]}
-          onPress={() => router.push('/gcash')}
+          onPress={() =>
+            router.push('/gcash')
+          }
           activeOpacity={0.85}
         >
 
@@ -352,36 +549,66 @@ export default function HomeScreen() {
               styles.gcashIcon,
             ]}
           >
-            <Text style={styles.paymentIconText}>
+
+            <Text
+              style={
+                styles.paymentIconText
+              }
+            >
               G
             </Text>
+
           </View>
 
-          <View style={styles.paymentInfo}>
-            <Text style={styles.paymentTitle}>
+
+          <View
+            style={
+              styles.paymentInfo
+            }
+          >
+
+            <Text
+              style={
+                styles.paymentTitle
+              }
+            >
               GCash
             </Text>
 
-            <Text style={styles.paymentDescription}>
+            <Text
+              style={
+                styles.paymentDescription
+              }
+            >
               GCash payment records
             </Text>
+
           </View>
 
-          <Text style={styles.paymentArrow}>
+
+          <Text
+            style={
+              styles.paymentArrow
+            }
+          >
             ›
           </Text>
 
         </TouchableOpacity>
 
 
-        {/* CASH */}
+        {/* ========================================
+            CASH
+        ======================================== */}
 
         <TouchableOpacity
           style={[
             styles.paymentCard,
             styles.cashCard,
           ]}
-          onPress={() => router.push('/cash')}
+          onPress={() =>
+            router.push('/cash')
+          }
           activeOpacity={0.85}
         >
 
@@ -391,22 +618,117 @@ export default function HomeScreen() {
               styles.cashIcon,
             ]}
           >
-            <Text style={styles.paymentIconText}>
+
+            <Text
+              style={
+                styles.paymentIconText
+              }
+            >
               ₱
             </Text>
+
           </View>
 
-          <View style={styles.paymentInfo}>
-            <Text style={styles.paymentTitle}>
+
+          <View
+            style={
+              styles.paymentInfo
+            }
+          >
+
+            <Text
+              style={
+                styles.paymentTitle
+              }
+            >
               Cash
             </Text>
 
-            <Text style={styles.paymentDescription}>
+            <Text
+              style={
+                styles.paymentDescription
+              }
+            >
               Cash payment records
             </Text>
+
           </View>
 
-          <Text style={styles.paymentArrow}>
+
+          <Text
+            style={
+              styles.paymentArrow
+            }
+          >
+            ›
+          </Text>
+
+        </TouchableOpacity>
+
+
+        {/* ========================================
+            UNKNOWN PAYMENT
+        ======================================== */}
+
+        <TouchableOpacity
+          style={[
+            styles.paymentCard,
+            styles.unknownCard,
+          ]}
+          onPress={() =>
+            router.push('/unknown')
+          }
+          activeOpacity={0.85}
+        >
+
+          <View
+            style={[
+              styles.paymentIcon,
+              styles.unknownIcon,
+            ]}
+          >
+
+            <Text
+              style={
+                styles.paymentIconText
+              }
+            >
+              ?
+            </Text>
+
+          </View>
+
+
+          <View
+            style={
+              styles.paymentInfo
+            }
+          >
+
+            <Text
+              style={
+                styles.paymentTitle
+              }
+            >
+              Unknown Payment
+            </Text>
+
+            <Text
+              style={
+                styles.paymentDescription
+              }
+            >
+              Payments that need to be identified
+            </Text>
+
+          </View>
+
+
+          <Text
+            style={
+              styles.paymentArrow
+            }
+          >
             ›
           </Text>
 
@@ -420,50 +742,101 @@ export default function HomeScreen() {
       ======================================== */}
 
       <Modal
-        visible={scanning || scanComplete}
+        visible={
+          scanning ||
+          scanComplete
+        }
         transparent={true}
         animationType="fade"
       >
 
-        <View style={styles.overlay}>
+        <View
+          style={
+            styles.overlay
+          }
+        >
 
-          <View style={styles.scanBox}>
+          <View
+            style={
+              styles.scanBox
+            }
+          >
 
             {scanning ? (
 
               <>
-                <View style={styles.loadingCircle}>
+
+                <View
+                  style={
+                    styles.loadingCircle
+                  }
+                >
+
                   <ActivityIndicator
                     size="large"
                     color="#C2185B"
                   />
+
                 </View>
 
-                <Text style={styles.scanTitle}>
+
+                <Text
+                  style={
+                    styles.scanTitle
+                  }
+                >
                   Scanning...
                 </Text>
 
-                <Text style={styles.scanSubtitle}>
+
+                <Text
+                  style={
+                    styles.scanSubtitle
+                  }
+                >
                   Analyzing the order
                 </Text>
+
               </>
 
             ) : (
 
               <>
-                <View style={styles.successCircle}>
-                  <Text style={styles.completeIcon}>
+
+                <View
+                  style={
+                    styles.successCircle
+                  }
+                >
+
+                  <Text
+                    style={
+                      styles.completeIcon
+                    }
+                  >
                     ✓
                   </Text>
+
                 </View>
 
-                <Text style={styles.scanTitle}>
+
+                <Text
+                  style={
+                    styles.scanTitle
+                  }
+                >
                   Scanning Complete!
                 </Text>
 
-                <Text style={styles.scanSubtitle}>
+
+                <Text
+                  style={
+                    styles.scanSubtitle
+                  }
+                >
                   Order successfully processed
                 </Text>
+
               </>
 
             )}
@@ -475,6 +848,7 @@ export default function HomeScreen() {
       </Modal>
 
     </View>
+
   );
 }
 
@@ -533,8 +907,11 @@ const styles = StyleSheet.create({
   scanCard: {
     width: '100%',
     minHeight: 105,
+
     backgroundColor: '#C2185B',
+
     borderRadius: 20,
+
     paddingHorizontal: 18,
     paddingVertical: 18,
 
@@ -544,22 +921,30 @@ const styles = StyleSheet.create({
     marginBottom: 35,
 
     shadowColor: '#C2185B',
+
     shadowOffset: {
       width: 0,
       height: 7,
     },
+
     shadowOpacity: 0.22,
     shadowRadius: 12,
+
     elevation: 6,
   },
 
   scanIconContainer: {
     width: 58,
     height: 58,
+
     borderRadius: 17,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+
+    backgroundColor:
+      'rgba(255,255,255,0.18)',
+
     alignItems: 'center',
     justifyContent: 'center',
+
     marginRight: 15,
   },
 
@@ -641,14 +1026,46 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
 
+
+  // ========================================
+  // GCASH
+  // ========================================
+
   gcashCard: {
     backgroundColor: '#FFF0F6',
     borderColor: '#F2C4D5',
   },
 
+  gcashIcon: {
+    backgroundColor: '#E83E8C',
+  },
+
+
+  // ========================================
+  // CASH
+  // ========================================
+
   cashCard: {
     backgroundColor: '#FFF8EA',
     borderColor: '#F0D9A8',
+  },
+
+  cashIcon: {
+    backgroundColor: '#D69E2E',
+  },
+
+
+  // ========================================
+  // UNKNOWN
+  // ========================================
+
+  unknownCard: {
+    backgroundColor: '#FFF4DD',
+    borderColor: '#F3C56B',
+  },
+
+  unknownIcon: {
+    backgroundColor: '#F59E0B',
   },
 
 
@@ -666,14 +1083,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
 
     marginRight: 14,
-  },
-
-  gcashIcon: {
-    backgroundColor: '#E83E8C',
-  },
-
-  cashIcon: {
-    backgroundColor: '#D69E2E',
   },
 
   paymentIconText: {
@@ -717,7 +1126,10 @@ const styles = StyleSheet.create({
 
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(53, 22, 32, 0.55)',
+
+    backgroundColor:
+      'rgba(53, 22, 32, 0.55)',
+
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -729,6 +1141,7 @@ const styles = StyleSheet.create({
 
   scanBox: {
     width: 300,
+
     paddingVertical: 32,
     paddingHorizontal: 25,
 
@@ -739,18 +1152,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
 
     shadowColor: '#000',
+
     shadowOffset: {
       width: 0,
       height: 8,
     },
+
     shadowOpacity: 0.2,
     shadowRadius: 20,
+
     elevation: 10,
   },
 
   loadingCircle: {
     width: 75,
     height: 75,
+
     borderRadius: 38,
 
     backgroundColor: '#FFE6F0',
@@ -762,6 +1179,7 @@ const styles = StyleSheet.create({
   successCircle: {
     width: 75,
     height: 75,
+
     borderRadius: 38,
 
     backgroundColor: '#F8D7E5',
