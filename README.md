@@ -148,6 +148,3 @@ You can download and install the Android APK of The Crisostomos — PaymentScann
 4. If prompted, allow your browser or file manager to install apps from that source.
 
 *Note: This application is intended for Android devices. Only install APK files from sources you trust.*
-
-## Hi Sir. Joaquin, nag chat rin po ako sainyo sa messenger para sana hingin kung ano gagamitin nyo na email account para po mabigyan ko kayo ng admin access since naisip ko na ito yung pinaka logical way sa system ko na through Supabase nalang yung pag bigay ng access. Thank you.
-
