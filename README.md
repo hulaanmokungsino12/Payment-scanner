@@ -1,6 +1,23 @@
-PaymentScanner
+## PaymentScanner
 
-A mobile application that uses AI to scan customer orders, organize payment records, and manage orders for people who likes to sell and manages orders.
+A mobile application that uses AI to scan customer orders, organize payment records, and manage orders for people who likes to sell food online and manually organize and compute their earnings.
+
+## Problems Being Solved
+
+**Manual Order Recording**
+- Recording customer orders manually can be time-consuming and may lead to errors when writing down names, items, and quantities.
+
+**Time-Consuming Order Processing**
+- A person need to read and transfer order details into records. AI-powered scanning helps reduce this manual work.
+
+**Disorganized Payment Records**
+- Managing Cash and GCash transactions separately helps organize orders and identify their payment status more easily.
+
+**Difficult Payment Tracking**
+- Keeping track of paid and unpaid orders can be challenging without a centralized record.
+
+**Manual Compute of Sale**
+- Manual computing the total sale and figuring out who paid cash and gcash is time consuming and may lead to errors.
 
 ## Features
 
