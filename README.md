@@ -28,6 +28,22 @@ A mobile application that uses AI to scan customer orders, organize payment reco
 - **Cloud Database** — Stores order records in Supabase for access across devices.
 - **User Roles** — Supports administrator and regular user accounts.
 
+## Admin and Staff Access
+
+The application has two user roles with different permissions.
+
+### Administrator
+- Access the same order-management features as Staff.
+- Delete order records when necessary.
+
+### Staff
+- Scan customer orders using the AI-powered scanner.
+- View and manage order details.
+- Organize orders under Cash and GCash.
+- Update order information and mark payments as paid.
+
+**Access Control:** Only authorized administrator accounts can perform administrative deletion actions. Database permissions are enforced through Supabase Row Level Security (RLS) policies.
+
 ## Technologies Used
 
 - React Native and Expo
@@ -115,4 +131,20 @@ For privacy and security, actual email addresses and passwords are not included 
 - Supabase RLS policies should enforce database permissions.
 - Administrative actions should be restricted to authorized users.
 - Never expose secret or `service_role` keys in the mobile application or public repository.
+
+## Download the Android APK
+
+You can download and install the Android APK of The Crisostomos — PaymentScanner using the link below.
+
+**[Download The Crisostomos APK](https://expo.dev/accounts/hulaanmokungsino/projects/PaymentScanner/builds/2ede34a4-64b0-4fa6-80a6-d6ff55e1ae02)**
+
+**Installation Instructions:**
+1. Open the download link on your Android device.
+2. Download the APK file from the Expo build page.
+3. Open the downloaded APK and follow the installation instructions.
+4. If prompted, allow your browser or file manager to install apps from that source.
+
+*Note: This application is intended for Android devices. Only install APK files from sources you trust.*
+
+
 
