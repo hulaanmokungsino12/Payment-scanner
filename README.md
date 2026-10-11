@@ -121,9 +121,12 @@ Download the generated APK from the Expo build page and install it on your Andro
 
 ## Test Accounts
 
-Personal Gmail accounts were used to test the administrator and regular user roles.
+**Test Admin Account** 
+- Email : arisbautista55@gmail.com
+- password : arispogi12
 
-For privacy and security, actual email addresses and passwords are not included in this repository. Test accounts must be registered and assigned the appropriate roles in Supabase.
+**Regular User/staff Account**
+- kindly register any valid accounts using the mobile application, an email confirmation is needed after registration.
 
 ## Security
 
