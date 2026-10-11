@@ -8,7 +8,8 @@ import {
   Alert,
   TextInput,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '@/contexts/AuthContext';
+import { fetchOrders, saveOrder, setOrderPaid, deleteOrder, deleteOrdersForPayment, markAllOrdersPaid, moveOrderPayment } from '@/lib/orders';
 import { useFocusEffect } from 'expo-router';
 
 // ========================================
@@ -147,6 +148,8 @@ const getItemTotal = (
 
 export default function UnknownScreen() {
 
+  const { role } = useAuth();
+
   const [unknownRecords, setUnknownRecords] =
     useState<any[]>([]);
 
@@ -179,54 +182,23 @@ export default function UnknownScreen() {
 
 
   // ========================================
-  // LOAD RECORDS
+  // REFRESH WHEN SCREEN OPENS
   // ========================================
 
   useFocusEffect(
     useCallback(() => {
-
       let isMounted = true;
-
       const loadRecords = async () => {
-
         try {
-
-          const savedRecords =
-            await AsyncStorage.getItem(
-              'unknownRecords'
-            );
-
-          if (!isMounted) return;
-
-          if (savedRecords) {
-
-            setUnknownRecords(
-              JSON.parse(savedRecords)
-            );
-
-          } else {
-
-            setUnknownRecords([]);
-
-          }
-
+          const records = await fetchOrders('Unknown');
+          if (isMounted) setUnknownRecords(records);
         } catch (error) {
-
-          console.error(
-            'Error loading Unknown records:',
-            error
-          );
-
+          console.error('Error loading Unknown orders from Supabase:', error);
+          if (isMounted) Alert.alert('Database Error', 'Could not load Unknown orders. Check your internet connection and Supabase setup.');
         }
-
       };
-
-      loadRecords();
-
-      return () => {
-        isMounted = false;
-      };
-
+      void loadRecords();
+      return () => { isMounted = false; };
     }, [])
   );
 
@@ -270,6 +242,7 @@ export default function UnknownScreen() {
 
     return total;
   };
+
 
 
   // ========================================
@@ -340,9 +313,7 @@ export default function UnknownScreen() {
 
             try {
 
-              await AsyncStorage.removeItem(
-                'unknownRecords'
-              );
+              await deleteOrdersForPayment('Unknown');
 
               setUnknownRecords([]);
 
@@ -392,22 +363,9 @@ export default function UnknownScreen() {
 
             try {
 
-              const updatedRecords =
-                unknownRecords.filter(
-                  (_, index) =>
-                    index !== indexToDelete
-                );
-
-              setUnknownRecords(
-                updatedRecords
-              );
-
-              await AsyncStorage.setItem(
-                'unknownRecords',
-                JSON.stringify(
-                  updatedRecords
-                )
-              );
+              const record = unknownRecords[indexToDelete];
+              await deleteOrder(record.id);
+              setUnknownRecords(unknownRecords.filter((_, index) => index !== indexToDelete));
 
               console.log(
                 'Unknown record deleted'
@@ -434,50 +392,16 @@ export default function UnknownScreen() {
   // TOGGLE PAID STATUS
   // ========================================
 
-  const togglePaid = async (
-    indexToToggle: number
-  ) => {
-
+  const togglePaid = async (indexToToggle: number) => {
+    const record = unknownRecords[indexToToggle];
+    const nextPaid = !record.paid;
     try {
-
-      const updatedRecords =
-        [...unknownRecords];
-
-      updatedRecords[
-        indexToToggle
-      ] = {
-
-        ...updatedRecords[
-          indexToToggle
-        ],
-
-        paid:
-          !updatedRecords[
-            indexToToggle
-          ].paid,
-
-      };
-
-      setUnknownRecords(
-        updatedRecords
-      );
-
-      await AsyncStorage.setItem(
-        'unknownRecords',
-        JSON.stringify(
-          updatedRecords
-        )
-      );
-
+      await setOrderPaid(record.id, nextPaid);
+      setUnknownRecords((current) => current.map((item, index) => index === indexToToggle ? { ...item, paid: nextPaid } : item));
     } catch (error) {
-
-      console.error(
-        'Error updating paid status:',
-        error
-      );
-
+      console.error('Error updating paid status:', error);
+      Alert.alert('Database Error', 'Could not update the paid status. Please try again.');
     }
-
   };
 
 
@@ -548,31 +472,20 @@ export default function UnknownScreen() {
   // ========================================
 
   const saveUpdate = async () => {
-
     try {
-
-      await AsyncStorage.setItem(
-        'unknownRecords',
-        JSON.stringify(
-          unknownRecords
-        )
-      );
-
+      const record = unknownRecords[editingIndex ?? -1];
+      if (!record) return;
+      if (!record.result.customer.trim()) {
+        Alert.alert('Validation', 'Customer name cannot be empty.');
+        return;
+      }
+      await saveOrder(record);
       setEditingIndex(null);
-
-      console.log(
-        'Unknown record updated successfully'
-      );
-
+      Alert.alert('Saved', 'Unknown order updated successfully.');
     } catch (error) {
-
-      console.error(
-        'Error saving Unknown record:',
-        error
-      );
-
+      console.error('Error saving Unknown order:', error);
+      Alert.alert('Database Error', 'Could not save this order. Please try again.');
     }
-
   };
 
 
@@ -588,10 +501,6 @@ export default function UnknownScreen() {
     const record =
       unknownRecords[index];
 
-    const destinationKey =
-      paymentType === 'GCash'
-        ? 'gcashRecords'
-        : 'cashRecords';
 
 
     Alert.alert(
@@ -609,62 +518,9 @@ export default function UnknownScreen() {
 
             try {
 
-              // Load existing destination records
-              const savedDestination =
-                await AsyncStorage.getItem(
-                  destinationKey
-                );
-
-              const destinationRecords =
-                savedDestination
-                  ? JSON.parse(savedDestination)
-                  : [];
-
-
-              // Change payment value
-              const updatedRecord = {
-                ...record,
-                result: {
-                  ...record.result,
-                  payment: paymentType,
-                },
-              };
-
-
-              // Add to destination
-              destinationRecords.push(
-                updatedRecord
-              );
-
-
-              // Remove from Unknown
-              const updatedUnknown =
-                unknownRecords.filter(
-                  (_, recordIndex) =>
-                    recordIndex !== index
-                );
-
-
-              // Save both
-              await AsyncStorage.setItem(
-                destinationKey,
-                JSON.stringify(
-                  destinationRecords
-                )
-              );
-
-              await AsyncStorage.setItem(
-                'unknownRecords',
-                JSON.stringify(
-                  updatedUnknown
-                )
-              );
-
-
-              // Update screen
-              setUnknownRecords(
-                updatedUnknown
-              );
+              await moveOrderPayment(record.id, paymentType);
+              const updatedUnknown = unknownRecords.filter((_, recordIndex) => recordIndex !== index);
+              setUnknownRecords(updatedUnknown);
 
 
               console.log(
@@ -785,7 +641,8 @@ export default function UnknownScreen() {
           DELETE ALL
       ======================================== */}
 
-      <Pressable
+      {role === 'admin' && (
+<Pressable
         style={
           styles.deleteAllButton
         }
@@ -811,6 +668,7 @@ export default function UnknownScreen() {
         </Text>
 
       </Pressable>
+)}
 
 
       {/* ========================================
@@ -1372,7 +1230,8 @@ export default function UnknownScreen() {
                     DELETE
                 ================================= */}
 
-                <Pressable
+                {role === 'admin' && (
+<Pressable
                   style={
                     styles.deleteButton
                   }
@@ -1390,6 +1249,7 @@ export default function UnknownScreen() {
                   </Text>
 
                 </Pressable>
+)}
 
               </View>
 

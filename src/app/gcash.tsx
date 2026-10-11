@@ -8,7 +8,8 @@ import {
   Alert,
   TextInput,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '@/contexts/AuthContext';
+import { fetchOrders, saveOrder, setOrderPaid, deleteOrder, deleteOrdersForPayment, markAllOrdersPaid, moveOrderPayment } from '@/lib/orders';
 import { useFocusEffect } from 'expo-router';
 
 // ========================================
@@ -154,6 +155,8 @@ const getItemTotal = (
 
 export default function GCashScreen() {
 
+  const { role } = useAuth();
+
   const [gcashRecords, setGcashRecords] =
     useState<any[]>([]);
 
@@ -185,40 +188,7 @@ export default function GCashScreen() {
   };
 
 
-  // ========================================
-  // LOAD RECORDS
-  // ========================================
-
-  const loadRecords = async () => {
-
-    try {
-
-      const savedRecords =
-        await AsyncStorage.getItem(
-          'gcashRecords'
-        );
-
-      if (savedRecords) {
-
-        setGcashRecords(
-          JSON.parse(savedRecords)
-        );
-
-      } else {
-
-        setGcashRecords([]);
-
-      }
-
-    } catch (error) {
-
-      console.error(
-        'Error loading GCash records:',
-        error
-      );
-
-    }
-  };
+  // Records are loaded from Supabase when this screen comes into focus.
 
 
   // ========================================
@@ -275,33 +245,17 @@ export default function GCashScreen() {
   useFocusEffect(
     useCallback(() => {
       let isMounted = true;
-
       const loadRecords = async () => {
         try {
-          const savedRecords =
-            await AsyncStorage.getItem('gcashRecords');
-
-          if (!isMounted) return;
-
-          if (savedRecords) {
-            setGcashRecords(JSON.parse(savedRecords));
-          } else {
-            setGcashRecords([]);
-          }
-
+          const records = await fetchOrders('GCash');
+          if (isMounted) setGcashRecords(records);
         } catch (error) {
-          console.error(
-            'Error loading Cash records:',
-            error
-          );
+          console.error('Error loading GCash orders from Supabase:', error);
+          if (isMounted) Alert.alert('Database Error', 'Could not load GCash orders. Check your internet connection and Supabase setup.');
         }
       };
-
-      loadRecords();
-
-      return () => {
-        isMounted = false;
-      };
+      void loadRecords();
+      return () => { isMounted = false; };
     }, [])
   );
 
@@ -329,9 +283,7 @@ export default function GCashScreen() {
 
             try {
 
-              await AsyncStorage.removeItem(
-                'gcashRecords'
-              );
+              await deleteOrdersForPayment('GCash');
 
               setGcashRecords([]);
 
@@ -381,22 +333,9 @@ export default function GCashScreen() {
 
             try {
 
-              const updatedRecords =
-                gcashRecords.filter(
-                  (_, index) =>
-                    index !== indexToDelete
-                );
-
-              setGcashRecords(
-                updatedRecords
-              );
-
-              await AsyncStorage.setItem(
-                'gcashRecords',
-                JSON.stringify(
-                  updatedRecords
-                )
-              );
+              const record = gcashRecords[indexToDelete];
+              await deleteOrder(record.id);
+              setGcashRecords(gcashRecords.filter((_, index) => index !== indexToDelete));
 
               console.log(
                 'GCash record deleted'
@@ -423,48 +362,15 @@ export default function GCashScreen() {
   // TOGGLE PAID STATUS
   // ========================================
 
-  const togglePaid = async (
-    indexToToggle: number
-  ) => {
-
+  const togglePaid = async (indexToToggle: number) => {
+    const record = gcashRecords[indexToToggle];
+    const nextPaid = !record.paid;
     try {
-
-      const updatedRecords =
-        [...gcashRecords];
-
-      updatedRecords[
-        indexToToggle
-      ] = {
-
-        ...updatedRecords[
-          indexToToggle
-        ],
-
-        paid:
-          !updatedRecords[
-            indexToToggle
-          ].paid,
-
-      };
-
-      setGcashRecords(
-        updatedRecords
-      );
-
-      await AsyncStorage.setItem(
-        'gcashRecords',
-        JSON.stringify(
-          updatedRecords
-        )
-      );
-
+      await setOrderPaid(record.id, nextPaid);
+      setGcashRecords((current) => current.map((item, index) => index === indexToToggle ? { ...item, paid: nextPaid } : item));
     } catch (error) {
-
-      console.error(
-        'Error updating paid status:',
-        error
-      );
-
+      console.error('Error updating paid status:', error);
+      Alert.alert('Database Error', 'Could not update the paid status. Please try again.');
     }
   };
 
@@ -536,46 +442,14 @@ export default function GCashScreen() {
   // ========================================
 
   const updateAll = async () => {
-
     try {
-
-      const updatedRecords =
-        gcashRecords.map(
-          (record) => ({
-            ...record,
-            paid: true,
-          })
-        );
-
-      setGcashRecords(
-        updatedRecords
-      );
-
-      await AsyncStorage.setItem(
-        'gcashRecords',
-        JSON.stringify(
-          updatedRecords
-        )
-      );
-
-      Alert.alert(
-        'Updated',
-        'All GCash records have been marked as paid.'
-      );
-
-      console.log(
-        'All GCash records marked as paid'
-      );
-
+      await markAllOrdersPaid('GCash');
+      setGcashRecords((current) => current.map((record) => ({ ...record, paid: true })));
+      Alert.alert('Updated', 'All GCash records have been marked as paid.');
     } catch (error) {
-
-      console.error(
-        'Error marking all GCash records as paid:',
-        error
-      );
-
+      console.error('Error marking all GCash records as paid:', error);
+      Alert.alert('Database Error', 'Could not mark all records as paid. Please try again.');
     }
-
   };
 
 
@@ -583,34 +457,20 @@ export default function GCashScreen() {
   // SAVE UPDATED RECORD
   // ========================================
 
-  const saveUpdate = async (
-    index: number
-  ) => {
-
+  const saveUpdate = async (index: number) => {
     try {
-
-      await AsyncStorage.setItem(
-        'gcashRecords',
-        JSON.stringify(
-          gcashRecords
-        )
-      );
-
+      const record = gcashRecords[index];
+      if (!record.result.customer.trim()) {
+        Alert.alert('Validation', 'Customer name cannot be empty.');
+        return;
+      }
+      await saveOrder(record);
       setEditingIndex(null);
-
-      console.log(
-        'GCash record updated successfully'
-      );
-
+      Alert.alert('Saved', 'GCash order updated successfully.');
     } catch (error) {
-
-      console.error(
-        'Error saving updated GCash record:',
-        error
-      );
-
+      console.error('Error saving updated GCash order:', error);
+      Alert.alert('Database Error', 'Could not save this order. Please try again.');
     }
-
   };
 
 
@@ -702,7 +562,8 @@ export default function GCashScreen() {
           DELETE ALL
       ======================================== */}
 
-      <Pressable
+      {role === 'admin' && (
+<Pressable
         style={
           styles.deleteAllButton
         }
@@ -728,6 +589,7 @@ export default function GCashScreen() {
         </Text>
 
       </Pressable>
+)}
 
 
       {/* ========================================
@@ -1240,7 +1102,8 @@ export default function GCashScreen() {
                     DELETE
                 ================================= */}
 
-                <Pressable
+                {role === 'admin' && (
+<Pressable
                   style={
                     styles.deleteButton
                   }
@@ -1258,6 +1121,7 @@ export default function GCashScreen() {
                   </Text>
 
                 </Pressable>
+)}
 
               </View>
 

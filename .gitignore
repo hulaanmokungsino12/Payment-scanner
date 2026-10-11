@@ -9,7 +9,8 @@ node_modules/
 # Expo
 .expo/
 dist/
-web-build/
+web-build/gh auth login
+
 expo-env.d.ts
 
 # Native

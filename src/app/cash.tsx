@@ -8,7 +8,8 @@ import {
   Alert,
   TextInput,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '@/contexts/AuthContext';
+import { fetchOrders, saveOrder, setOrderPaid, deleteOrder, deleteOrdersForPayment, markAllOrdersPaid, moveOrderPayment } from '@/lib/orders';
 import { useFocusEffect } from 'expo-router';
 
 // ========================================
@@ -151,6 +152,8 @@ const getItemTotal = (
 
 export default function CashScreen() {
 
+  const { role } = useAuth();
+
   const [cashRecords, setCashRecords] =
     useState<any[]>([]);
 
@@ -180,40 +183,7 @@ export default function CashScreen() {
   };
 
 
-  // ========================================
-  // LOAD RECORDS
-  // ========================================
-
-  const loadRecords = async () => {
-
-    try {
-
-      const savedRecords =
-        await AsyncStorage.getItem(
-          'cashRecords'
-        );
-
-      if (savedRecords) {
-
-        setCashRecords(
-          JSON.parse(savedRecords)
-        );
-
-      } else {
-
-        setCashRecords([]);
-
-      }
-
-    } catch (error) {
-
-      console.error(
-        'Error loading Cash records:',
-        error
-      );
-
-    }
-  };
+  // Records are loaded from Supabase when this screen comes into focus.
 
 
   // ========================================
@@ -270,33 +240,17 @@ export default function CashScreen() {
   useFocusEffect(
     useCallback(() => {
       let isMounted = true;
-
       const loadRecords = async () => {
         try {
-          const savedRecords =
-            await AsyncStorage.getItem('cashRecords');
-
-          if (!isMounted) return;
-
-          if (savedRecords) {
-            setCashRecords(JSON.parse(savedRecords));
-          } else {
-            setCashRecords([]);
-          }
-
+          const records = await fetchOrders('Cash');
+          if (isMounted) setCashRecords(records);
         } catch (error) {
-          console.error(
-            'Error loading Cash records:',
-            error
-          );
+          console.error('Error loading Cash orders from Supabase:', error);
+          if (isMounted) Alert.alert('Database Error', 'Could not load Cash orders. Check your internet connection and Supabase setup.');
         }
       };
-
-      loadRecords();
-
-      return () => {
-        isMounted = false;
-      };
+      void loadRecords();
+      return () => { isMounted = false; };
     }, [])
   );
 
@@ -324,9 +278,7 @@ export default function CashScreen() {
 
             try {
 
-              await AsyncStorage.removeItem(
-                'cashRecords'
-              );
+              await deleteOrdersForPayment('Cash');
 
               setCashRecords([]);
 
@@ -375,22 +327,9 @@ export default function CashScreen() {
 
             try {
 
-              const updatedRecords =
-                cashRecords.filter(
-                  (_, index) =>
-                    index !== indexToDelete
-                );
-
-              setCashRecords(
-                updatedRecords
-              );
-
-              await AsyncStorage.setItem(
-                'cashRecords',
-                JSON.stringify(
-                  updatedRecords
-                )
-              );
+              const record = cashRecords[indexToDelete];
+              await deleteOrder(record.id);
+              setCashRecords(cashRecords.filter((_, index) => index !== indexToDelete));
 
               console.log(
                 'Cash record deleted'
@@ -416,46 +355,15 @@ export default function CashScreen() {
   // TOGGLE PAID STATUS
   // ========================================
 
-  const togglePaid = async (
-    indexToToggle: number
-  ) => {
-
+  const togglePaid = async (indexToToggle: number) => {
+    const record = cashRecords[indexToToggle];
+    const nextPaid = !record.paid;
     try {
-
-      const updatedRecords =
-        [...cashRecords];
-
-      updatedRecords[indexToToggle] = {
-        ...updatedRecords[indexToToggle],
-
-        paid:
-          !updatedRecords[indexToToggle]
-            .paid,
-      };
-
-      setCashRecords(
-        updatedRecords
-      );
-
-      await AsyncStorage.setItem(
-        'cashRecords',
-        JSON.stringify(
-          updatedRecords
-        )
-      );
-
-      console.log(
-        'Paid status:',
-        updatedRecords[indexToToggle].paid
-      );
-
+      await setOrderPaid(record.id, nextPaid);
+      setCashRecords((current) => current.map((item, index) => index === indexToToggle ? { ...item, paid: nextPaid } : item));
     } catch (error) {
-
-      console.error(
-        'Error updating paid status:',
-        error
-      );
-
+      console.error('Error updating paid status:', error);
+      Alert.alert('Database Error', 'Could not update the paid status. Please try again.');
     }
   };
 
@@ -524,44 +432,13 @@ export default function CashScreen() {
   // ========================================
 
   const updateAll = async () => {
-
     try {
-
-      const updatedRecords =
-        cashRecords.map(
-          (record) => ({
-            ...record,
-            paid: true,
-          })
-        );
-
-      setCashRecords(
-        updatedRecords
-      );
-
-      await AsyncStorage.setItem(
-        'cashRecords',
-        JSON.stringify(
-          updatedRecords
-        )
-      );
-
-      Alert.alert(
-        'Updated',
-        'All Cash records have been marked as paid.'
-      );
-
-      console.log(
-        'All Cash records marked as paid'
-      );
-
+      await markAllOrdersPaid('Cash');
+      setCashRecords((current) => current.map((record) => ({ ...record, paid: true })));
+      Alert.alert('Updated', 'All Cash records have been marked as paid.');
     } catch (error) {
-
-      console.error(
-        'Error marking all Cash records as paid:',
-        error
-      );
-
+      console.error('Error marking all Cash records as paid:', error);
+      Alert.alert('Database Error', 'Could not mark all records as paid. Please try again.');
     }
   };
 
@@ -570,32 +447,19 @@ export default function CashScreen() {
   // SAVE UPDATED RECORD
   // ========================================
 
-  const saveUpdate = async (
-    index: number
-  ) => {
-
+  const saveUpdate = async (index: number) => {
     try {
-
-      await AsyncStorage.setItem(
-        'cashRecords',
-        JSON.stringify(
-          cashRecords
-        )
-      );
-
+      const record = cashRecords[index];
+      if (!record.result.customer.trim()) {
+        Alert.alert('Validation', 'Customer name cannot be empty.');
+        return;
+      }
+      await saveOrder(record);
       setEditingIndex(null);
-
-      console.log(
-        'Cash record updated successfully'
-      );
-
+      Alert.alert('Saved', 'Cash order updated successfully.');
     } catch (error) {
-
-      console.error(
-        'Error saving updated Cash record:',
-        error
-      );
-
+      console.error('Error saving updated Cash order:', error);
+      Alert.alert('Database Error', 'Could not save this order. Please try again.');
     }
   };
 
@@ -684,7 +548,8 @@ export default function CashScreen() {
           DELETE ALL
       ======================================== */}
 
-      <Pressable
+      {role === 'admin' && (
+<Pressable
         style={styles.deleteAllButton}
         onPress={deleteAllRecords}
       >
@@ -698,6 +563,7 @@ export default function CashScreen() {
         </Text>
 
       </Pressable>
+)}
 
 
       {/* ========================================
@@ -1095,7 +961,8 @@ export default function CashScreen() {
                     DELETE
                 ================================= */}
 
-                <Pressable
+                {role === 'admin' && (
+<Pressable
                   style={
                     styles.deleteButton
                   }
@@ -1113,6 +980,7 @@ export default function CashScreen() {
                   </Text>
 
                 </Pressable>
+)}
 
               </View>
 

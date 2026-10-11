@@ -5,13 +5,69 @@ const { GoogleGenAI } = require('@google/genai');
 
 const app = express();
 
-app.use(express.json({ limit: '20mb' }));
+// Use the public/anon key only to verify user access tokens. Never put the
+// Supabase service-role key in this server configuration.
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+
+const supabaseAuthConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+
+async function requireSupabaseAuth(req, res, next) {
+  if (!supabaseAuthConfigured) {
+    console.error('Missing SUPABASE_URL or SUPABASE_ANON_KEY environment variable');
+    return res.status(503).json({
+      success: false,
+      message: 'Authentication service is not configured.',
+    });
+  }
+
+  const authorization = req.get('authorization') || '';
+  const tokenMatch = authorization.match(/^Bearer\s+(.+)$/i);
+
+  if (!tokenMatch) {
+    return res.status(401).json({
+      success: false,
+      message: 'Authentication required. Please log in and try again.',
+    });
+  }
+
+  try {
+    // Ask Supabase Auth to validate the token; do not trust a decoded JWT alone.
+    const verificationResponse = await fetch(`${supabaseUrl.replace(/\/$/, '')}/auth/v1/user`, {
+      method: 'GET',
+      headers: {
+        apikey: supabaseAnonKey,
+        Authorization: `Bearer ${tokenMatch[1]}`,
+      },
+    });
+
+    const verifiedUser = verificationResponse.ok
+      ? await verificationResponse.json()
+      : null;
+
+    if (!verifiedUser?.id) {
+      return res.status(401).json({
+        success: false,
+        message: 'Your login session is invalid or expired. Please log in again.',
+      });
+    }
+
+    req.authenticatedUser = verifiedUser;
+    return next();
+  } catch (error) {
+    console.error('Supabase token verification failed:', error.message);
+    return res.status(503).json({
+      success: false,
+      message: 'Unable to verify your login right now. Please try again.',
+    });
+  }
+}
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
 });
 
-app.post('/scan', async (req, res) => {
+app.post('/scan', requireSupabaseAuth, express.json({ limit: '20mb' }), async (req, res) => {
   console.log('Received scan request');
 
   const base64Image = req.body.image;
