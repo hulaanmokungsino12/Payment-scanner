@@ -122,7 +122,7 @@ Download the generated APK from the Expo build page and install it on your Andro
 ## Test Accounts
 
 **Test Admin Account** 
-- Hi Sir. Joaquin, chinat po kita para po gawin kong admin yung ireregister nyo po na email account since yun po logical way na naisip ko para sa system ko na sa supabase yung pag handle ng mga accounts, since i pupublic ko po tong repository. thank you po.
+- Hi Sir. Joaquin, chinat ko nalang po sayo sa messenger and teams yung admin account ko po since magiging public po itong repository thank you po.
 
 **Regular User/staff Account**
 - kindly register any valid accounts using the mobile application, an email confirmation is needed after registration.
