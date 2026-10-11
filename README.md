@@ -1,6 +1,6 @@
-# \# PaymentScanner
+PaymentScanner
 
-# A mobile order-management application I created mainly for people who manages their own orders when it comes to selling food in their own community, that uses AI-powered image scanning to extract customer orders and organize them according to payment method. The application integrates Gemini AI, Supabase, and a Node.js backend to help streamline order recording and payment tracking.
+A mobile application that uses AI to scan customer orders, organize payment records, and manage orders for people who likes to sell and manages orders.
 
 ## Features
 
