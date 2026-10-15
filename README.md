@@ -1,538 +1,149 @@
-# \# PaymentScanner
+## PaymentScanner
 
-# 
+A mobile application that uses AI to scan customer orders, organize payment records, and manage orders for people who likes to sell food online and manually organize and compute their earnings.
 
-# A mobile order-management application I created mainly for people who manages their own orders when it comes to selling food in their own community, that uses AI-powered image scanning to extract customer orders and organize them according to payment method. The application integrates Gemini AI, Supabase, and a Node.js backend to help streamline order recording and payment tracking.
+## Problems Being Solved
 
-# 
+**Manual Order Recording**
+- Recording customer orders manually can be time-consuming and may lead to errors when writing down names, items, and quantities.
 
-# \## Features
+**Time-Consuming Order Processing**
+- A person need to read and transfer order details into records. AI-powered scanning helps reduce this manual work.
 
-# 
+**Disorganized Payment Records**
+- Managing Cash and GCash transactions separately helps organize orders and identify their payment status more easily.
 
-# \- \*\*AI-Powered Order Scanning\*\* — Capture an image of an order or customer message and use Gemini AI to extract structured order information.
+**Difficult Payment Tracking**
+- Keeping track of paid and unpaid orders can be challenging without a centralized record.
 
-# \- \*\*Automatic Order Extraction\*\* — Identify customer names, ordered items, quantities, and payment information from scanned content.
+**Manual Compute of Sale**
+- Manual computing the total sale and figuring out who paid cash and gcash is time consuming and may lead to errors.
 
-# \- \*\*Payment Categorization\*\* — Organize orders into separate Cash and GCash records.
+## Features
 
-# \- \*\*Order Management\*\* — View and update customer names, items, and quantities.
+- **AI Order Scanning** — Extracts customer names, items, and quantities from order images using Gemini AI.
+- **Payment Management** — Organizes orders into Cash and GCash records.
+- **Order Tracking** — Update order details and mark payments as paid.
+- **User Authentication** — Secure login and registration using Supabase.
+- **Cloud Database** — Stores order records in Supabase for access across devices.
+- **User Roles** — Supports administrator and regular user accounts.
 
-# \- \*\*Payment Tracking\*\* — Mark orders as paid and view payment totals.
+## Admin and Staff Access
 
-# \- \*\*Cloud Database\*\* — Store orders in Supabase so authorized users can access shared records across devices.
+The application has two user roles with different permissions.
 
-# \- \*\*User Authentication\*\* — Register and log in using Supabase Authentication.
+### Administrator
+- Access the same order-management features as Staff.
+- Delete order records when necessary.
 
-# \- \*\*Role-Based Access\*\* — Support admin and staff roles, with administrative deletion permissions enforced through the appropriate database policies.
+### Staff
+- Scan customer orders using the AI-powered scanner.
+- View and manage order details.
+- Organize orders under Cash and GCash.
+- Update order information and mark payments as paid.
 
-# \- \*\*Secure Scanning Endpoint\*\* — Require a valid Supabase access token when submitting images to the Render backend.
+**Access Control:** Only authorized administrator accounts can perform administrative deletion actions. Database permissions are enforced through Supabase Row Level Security (RLS) policies.
 
-# 
+## Technologies Used
 
-# \## Technology Stack
+- React Native and Expo
+- TypeScript
+- Google Gemini API
+- Node.js and Express
+- Supabase Authentication and PostgreSQL
+- Render
+- Expo Application Services (EAS)
 
-# 
+## Setup Instructions
 
-# | Technology | Purpose |
+### 1. Clone the Repository
 
-# |---|---|
+```bash
+git clone https://github.com/hulaanmokungsino12/Payment-scanner.git
+cd PaymentScanner-github
+```
 
-# | React Native | Mobile application |
+### 2. Install Dependencies
 
-# | Expo | Development and Android builds |
+```bash
+npm install
+cd server
+npm install
+cd ..
+```
 
-# | Expo Router | Application navigation |
+### 3. Configure Supabase
 
-# | TypeScript | Application development |
+Create a Supabase project and configure the required database tables, authentication, and Row Level Security (RLS) policies using `supabase/schema.sql`.
 
-# | Gemini AI | AI-powered image and order extraction |
+Configure these environment variables for the Expo application:
 
-# | Node.js and Express | Backend API |
+```env
+EXPO_PUBLIC_SUPABASE_URL=your_supabase_project_url
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_publishable_or_anon_key
+```
 
-# | Render | Backend hosting |
+### 4. Configure Google Gemini AI
 
-# | Supabase Auth | User authentication |
+1. Visit [Google AI Studio](https://aistudio.google.com/).
+2. Sign in with a Google account and obtain a Gemini API key.
+3. Configure API access and billing or usage limits as required for your account.
+4. Add the key to the Render backend environment variables as `GEMINI_API_KEY`.
 
-# | Supabase PostgreSQL | Cloud order storage |
+### 5. Configure Render
 
-# | AsyncStorage | Local persistence of authentication sessions |
+Deploy the `server` directory to Render and configure these environment variables:
 
-# 
+```env
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_ANON_KEY=your_supabase_publishable_or_anon_key
+GEMINI_API_KEY=your_gemini_api_key
+```
 
-# \## Project Structure
+Keep all secret keys private. Do not commit `.env` files to GitHub.
 
-# 
+### 6. Build the Android APK
 
-# ```text
+Configure the Expo environment variables for the `preview` environment, then run:
 
-# PaymentScanner/
+```bash
+eas login
+eas build --platform android --profile preview --environment preview
+```
 
-# ├── src/
+Download the generated APK from the Expo build page and install it on your Android device.
 
-# │   ├── app/
+## AI Tools Used
 
-# │   │   ├── \_layout.tsx
+**ChatGPT (OpenAI)** was the only AI tool used to assist with system development, including programming guidance, debugging, and troubleshooting.
 
-# │   │   ├── index.tsx
+**Google Gemini AI** is integrated into the application to process order images and extract order information.
 
-# │   │   ├── login.tsx
+## Test Accounts
 
-# │   │   ├── register.tsx
+**Test Admin Account** 
+- Hi Sir. Joaquin, chinat ko nalang po sayo sa messenger and teams yung admin account ko po since magiging public po itong repository thank you po.
 
-# │   │   ├── dashboard.tsx
+**Regular User/staff Account**
+- kindly register any valid accounts using the mobile application, an email confirmation is needed after registration.
 
-# │   │   ├── cash.tsx
+## Security
 
-# │   │   ├── gcash.tsx
+- Protected backend endpoints require valid authentication.
+- Supabase RLS policies should enforce database permissions.
+- Administrative actions should be restricted to authorized users.
+- Never expose secret or `service_role` keys in the mobile application or public repository.
 
-# │   │   └── unknown.tsx
+## Download the Android APK
 
-# │   ├── contexts/
+You can download and install the Android APK of The Crisostomos — PaymentScanner using the link below.
 
-# │   │   └── AuthContext.tsx
+**[Download The Crisostomos APK](https://expo.dev/accounts/hulaanmokungsino/projects/PaymentScanner/builds/2ede34a4-64b0-4fa6-80a6-d6ff55e1ae02)**
 
-# │   └── lib/
+**Installation Instructions:**
+1. Open the download link on your Android device.
+2. Download the APK file from the Expo build page.
+3. Open the downloaded APK and follow the installation instructions.
+4. If prompted, allow your browser or file manager to install apps from that source.
 
-# │       ├── orders.ts
-
-# │       └── supabase.ts
-
-# ├── server/
-
-# │   ├── server.js
-
-# │   └── package.json
-
-# ├── supabase/
-
-# │   └── schema.sql
-
-# ├── app.json
-
-# ├── eas.json
-
-# ├── package.json
-
-# └── README.md
-
-# ```
-
-# 
-
-# \## How It Works
-
-# 
-
-# 1\. A user logs in to the application.
-
-# 2\. The user captures a photo containing order information.
-
-# 3\. The mobile application sends the image and the user's Supabase access token to the backend API.
-
-# 4\. The backend validates the access token with Supabase Authentication.
-
-# 5\. Gemini AI processes the image and extracts the order information.
-
-# 6\. The application organizes the resulting records according to payment method.
-
-# 7\. Orders are saved to the Supabase database and can be accessed by authorized users on other devices.
-
-# 
-
-# \## Requirements
-
-# 
-
-# Before setting up the project, install:
-
-# 
-
-# \- Node.js and npm
-
-# \- Expo CLI through the EAS CLI
-
-# \- An Expo account
-
-# \- A Supabase project
-
-# \- A Gemini API key
-
-# \- A Render account for backend hosting
-
-# 
-
-# \## Installation
-
-# 
-
-# \### 1. Clone the Repository
-
-# 
-
-# ```bash
-
-# git clone https://github.com/hulaanmokungsino12/Payment-scanner.git
-
-# cd PaymentScanner-github
-
-# ```
-
-# 
-
-# Use the actual directory name created by Git if it differs from the example above.
-
-# 
-
-# \### 2. Install Dependencies
-
-# 
-
-# Install the mobile application dependencies:
-
-# 
-
-# ```bash
-
-# npm install
-
-# ```
-
-# 
-
-# If the backend dependencies are managed separately, install them as well:
-
-# 
-
-# ```bash
-
-# cd server
-
-# npm install
-
-# cd ..
-
-# ```
-
-# 
-
-# \### 3. Configure Environment Variables
-
-# 
-
-# Create a local `.env` file in the project root for the Expo application.
-
-# 
-
-# ```env
-
-# EXPO\_PUBLIC\_SUPABASE\_URL=your\_supabase\_project\_url
-
-# EXPO\_PUBLIC\_SUPABASE\_ANON\_KEY=your\_supabase\_publishable\_or\_anon\_key
-
-# ```
-
-# 
-
-# Replace the placeholder values with your actual Supabase project URL and publishable key or legacy anon key.
-
-# 
-
-# The application reads these variables in `src/lib/supabase.ts`.
-
-# 
-
-# \*\*Important:\*\* Expo public environment variables are embedded in the client application. Never put a Supabase secret key or `service\_role` key in the mobile app.
-
-# 
-
-# \### 4. Configure Expo EAS
-
-# 
-
-# For cloud builds, configure the following environment variables in the Expo dashboard under the `preview` environment:
-
-# 
-
-# \- `EXPO\_PUBLIC\_SUPABASE\_URL`
-
-# \- `EXPO\_PUBLIC\_SUPABASE\_ANON\_KEY`
-
-# 
-
-# Alternatively, configure them using the EAS CLI or the supported Expo environment-variable workflow.
-
-# 
-
-# Verify the configuration with:
-
-# 
-
-# ```bash
-
-# eas env:list --environment preview
-
-# ```
-
-# 
-
-# \### 5. Configure the Backend
-
-# 
-
-# The backend requires its own environment variables. Configure these in the Render service's Environment settings.
-
-# 
-
-# ```env
-
-# SUPABASE\_URL=your\_supabase\_project\_url
-
-# SUPABASE\_ANON\_KEY=your\_supabase\_publishable\_or\_anon\_key
-
-# GEMINI\_API\_KEY=your\_gemini\_api\_key
-
-# ```
-
-# 
-
-# Use the variable names expected by the backend source code. Do not commit actual credentials to GitHub.
-
-# 
-
-# \### 6. Configure Supabase
-
-# 
-
-# 1\. Create or select your Supabase project.
-
-# 2\. Open the SQL Editor.
-
-# 3\. Review and execute the database schema in `supabase/schema.sql`.
-
-# 4\. Configure the required Row Level Security (RLS) policies.
-
-# 5\. Confirm that authentication and database permissions match the application's admin and staff roles.
-
-# 
-
-# The database policies should enforce access restrictions independently of the mobile interface.
-
-# 
-
-# \### 7. Deploy the Backend
-
-# 
-
-# Deploy the `server` directory to Render using the appropriate service configuration.
-
-# 
-
-# Configure the environment variables listed above and deploy the latest version of the backend.
-
-# 
-
-# The mobile application uses the deployed `/scan` endpoint. Update the endpoint in the mobile source if your backend URL changes.
-
-# 
-
-# \## Running the Application
-
-# 
-
-# Start the Expo development server:
-
-# 
-
-# ```bash
-
-# npx expo start
-
-# ```
-
-# 
-
-# Follow the Expo instructions to run the application on a compatible device or development environment.
-
-# 
-
-# \## Building an Android APK
-
-# 
-
-# The project uses EAS Build to generate an installable Android APK through the `preview` profile.
-
-# 
-
-# Log in to Expo:
-
-# 
-
-# ```bash
-
-# eas login
-
-# ```
-
-# 
-
-# Build the APK:
-
-# 
-
-# ```bash
-
-# eas build --platform android --profile preview --environment preview
-
-# ```
-
-# 
-
-# The `preview` profile in `eas.json` specifies the Android build type as `apk`.
-
-# 
-
-# After the build completes, download the generated APK from the Expo build page and install it on a compatible Android device.
-
-# 
-
-# Make sure the correct environment variables are configured before building.
-
-# 
-
-# \## Configure Gemini AI for the Scanner
-
-# 
-
-# The AI-powered scanner uses Google's Gemini API to extract customer names, ordered items, quantities, and payment information from captured images.
-
-# 
-
-# To enable the scanner:
-
-# 
-
-# Visit Google AI Studio.
-
-# 
-
-# Sign in with a Google account.
-
-# 
-
-# Set up access to the Gemini API and obtain an API key.
-
-# 
-
-# Configure the required API billing or usage allowance for your account. Depending on the selected model and your usage, paid API access may require enabling billing and purchasing or paying for API usage.
-
-# 
-
-# Add the Gemini API key to the Render backend's environment variables using the name GEMINI\_API\_KEY.
-
-# 
-
-# Redeploy the backend if necessary.
-
-# 
-
-# Important: The scanner will not work correctly if the Gemini API key is missing, invalid, or unable to access the selected model. Keep the API key on the backend and never expose it in the mobile application or public repository.
-
-# 
-
-# Google AI Studio account access and API pricing depend on Google's current availability, usage limits, and billing policies.
-
-# 
-
-# \## Security
-
-# 
-
-# \- Keep `.env` files and private API credentials out of version control.
-
-# \- Use Supabase Authentication to identify users.
-
-# \- Validate access tokens on protected backend endpoints.
-
-# \- Enforce authorization and data access restrictions through Supabase RLS policies.
-
-# \- Restrict administrative actions to authorized admin accounts.
-
-# \- Never expose Supabase secret or `service\_role` keys in the mobile application.
-
-# \- Store backend credentials in Render environment variables.
-
-# \- Do not rely solely on hiding buttons in the application to enforce permissions.
-
-# 
-
-# \## Troubleshooting
-
-# 
-
-# \### Supabase Connection Errors
-
-# 
-
-# Verify that `EXPO\_PUBLIC\_SUPABASE\_URL` and `EXPO\_PUBLIC\_SUPABASE\_ANON\_KEY` contain the correct values in the environment used for the build.
-
-# 
-
-# If an APK was built before configuring these variables, create a new build and install that APK.
-
-# 
-
-# \### Scanner Authentication Errors
-
-# 
-
-# If the scanner reports that authentication is not configured, verify that the Render service has the required Supabase environment variables.
-
-# 
-
-# If authentication fails despite correct configuration, check the backend logs and confirm that the application is sending a valid Supabase access token.
-
-# 
-
-# \### Gemini Scanning Errors
-
-# 
-
-# Check that `GEMINI\_API\_KEY` is configured correctly on Render. Review the backend logs for API errors or request failures.
-
-# 
-
-# \### Build Errors
-
-# 
-
-# Run `npm install` in the project directory. Check the Expo Router dependency and confirm that the EAS `preview` build profile is configured correctly.
-
-# 
-
-# \## License
-
-# 
-
-# No license has been specified yet. Unless a license is added to this repository, reuse and redistribution are not automatically permitted.
-
-# 
-
-# \## AI Tools Used
-
-# 
-
-# ChatGPT (OpenAI) was the only AI tool used during the development of this system. It assisted with programming guidance, debugging, troubleshooting, and improving the implementation of features such as Supabase authentication, Gemini-powered order scanning, database integration, and Android APK builds.
-
-# 
-
-# \## Test Accounts
-
-# 
-
-# The application was tested using personal Gmail accounts registered through the application's authentication system. Separate accounts were used to test the administrator and regular user roles.
-
-# 
-
-# For security and privacy reasons, actual account credentials are not published in this repository. To test the application, authorized testers should use their assigned accounts or register accounts and have the appropriate roles configured in Supabase.
-
+*Note: This application is intended for Android devices. Only install APK files from sources you trust.*
