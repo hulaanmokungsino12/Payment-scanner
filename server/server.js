@@ -167,7 +167,7 @@ Use these product names when returning the "item" field.
 
 15. Beef Smash Burger with Potato Wedges and Lemonade — ₱120
 
-16. Lumpianada — ₱60
+16. Lumpianada — ₱70
 
 17. Lumpianada Combo — ₱75
 
