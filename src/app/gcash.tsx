@@ -34,7 +34,7 @@ const items: Record<string, number> = {
   'beef smash burger with lemonade': 85,
   'beef smash burger with potato wedges': 110,
   'beef smash burger with potato wedges and lemonade': 120,
-  'lumpianada': 60,
+  'lumpianada': 70,
   'lumpianada combo': 75,
   'seaweed': 20,
   'combo': 115,

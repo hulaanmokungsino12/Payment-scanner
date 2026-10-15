@@ -18,7 +18,7 @@ const menu = [
   ['Freshly Baked Tuna Sushi', '₱80'],
   ['Cucumber Lemonade', '₱25'],
   ['Pork Mami Overload', '₱65'],
-  ['Lumpianada', '₱60'],
+  ['Lumpianada', '₱70'],
 ];
 
 export default function LandingPage() {
