@@ -7,6 +7,7 @@ export type OrderRecord = {
   id: string;
   result: {
     customer: string;
+    address?: string;
     orders: any[];
     payment: PaymentMethod;
   };
@@ -17,6 +18,7 @@ export type OrderRecord = {
 type DatabaseOrder = {
   id: string;
   customer: string;
+  address?: string | null;
   payment_method: PaymentMethod;
   items: any[];
   paid: boolean;
@@ -28,6 +30,7 @@ function toRecord(row: DatabaseOrder): OrderRecord {
     id: row.id,
     result: {
       customer: row.customer,
+      address: row.address ?? '',
       orders: Array.isArray(row.items) ? row.items : [],
       payment: row.payment_method,
     },
@@ -49,6 +52,7 @@ export async function migrateLegacyLocalOrders(userId: string) {
   ];
   const rows: Array<{
     customer: string;
+    address: string;
     payment_method: PaymentMethod;
     items: any[];
     paid: boolean;
@@ -71,6 +75,7 @@ export async function migrateLegacyLocalOrders(userId: string) {
       if (!customer) continue;
       rows.push({
         customer,
+        address: String(record?.result?.address ?? '').trim(),
         payment_method: legacy.paymentMethod,
         items: Array.isArray(record?.result?.orders) ? record.result.orders : [],
         paid: Boolean(record?.paid),
@@ -95,7 +100,7 @@ export async function migrateLegacyLocalOrders(userId: string) {
 export async function fetchOrders(paymentMethod: PaymentMethod): Promise<OrderRecord[]> {
   const { data, error } = await supabase
     .from('orders')
-    .select('id, customer, payment_method, items, paid, created_at')
+    .select('id, customer, address, payment_method, items, paid, created_at')
     .eq('payment_method', paymentMethod)
     .order('created_at', { ascending: false });
 
@@ -115,6 +120,7 @@ export async function createOrdersFromScan(customers: any[], userId: string) {
     if (!name) throw new Error('A scanned order is missing the customer name. Please correct the scan and try again.');
     return {
       customer: name,
+      address: String(customer?.address ?? '').trim(),
       payment_method,
       items: Array.isArray(customer?.orders) ? customer.orders : [],
       paid: false,
@@ -133,6 +139,7 @@ export async function saveOrder(record: OrderRecord) {
     .from('orders')
     .update({
       customer: record.result.customer.trim(),
+      address: String(record.result.address ?? '').trim(),
       items: record.result.orders,
       paid: record.paid,
       payment_method: record.result.payment,

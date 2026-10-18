@@ -152,6 +152,17 @@ const getItemTotal = (
   );
 };
 
+// Use a saved per-order unit price when present. Older orders keep
+// the original menu pricing, including the seaweed bundle calculation.
+const getOrderItemTotal = (order: any) => {
+  const quantity = Math.max(0, Number(order.quantity) || 0);
+  if (order.price !== undefined && order.price !== null) {
+    const price = Math.max(0, Number(order.price) || 0);
+    return price * quantity;
+  }
+  return getItemTotal(order.item || '', quantity, order.cheese === true);
+};
+
 
 export default function GCashScreen() {
 
@@ -187,6 +198,24 @@ export default function GCashScreen() {
     );
   };
 
+  // Update the address for this order only
+  const updateCustomerAddress = (
+    recordIndex: number,
+    newAddress: string
+  ) => {
+    const updatedRecords = gcashRecords.map((record, index) => {
+      if (index !== recordIndex) return record;
+      return {
+        ...record,
+        result: {
+          ...(record.result || {}),
+          address: newAddress,
+        },
+      };
+    });
+    setGcashRecords(updatedRecords);
+  };
+
 
   // Records are loaded from Supabase when this screen comes into focus.
 
@@ -218,12 +247,7 @@ export default function GCashScreen() {
             const cheese =
               order.cheese === true;
 
-            const itemTotal =
-              getItemTotal(
-                itemName,
-                quantity,
-                cheese
-              );
+            const itemTotal = getOrderItemTotal(order);
 
             totalPaid +=
               itemTotal;
@@ -434,6 +458,27 @@ export default function GCashScreen() {
       updatedRecords
     );
 
+  };
+
+  // UPDATE PRICE FOR THIS ORDER ITEM ONLY
+  const updateItemPrice = (
+    recordIndex: number,
+    orderIndex: number,
+    newPrice: string
+  ) => {
+    const updatedRecords = [...gcashRecords];
+    updatedRecords[recordIndex] = {
+      ...updatedRecords[recordIndex],
+      result: {
+        ...updatedRecords[recordIndex].result,
+        orders: updatedRecords[recordIndex].result.orders.map((order: any, index: number) =>
+          index === orderIndex
+            ? { ...order, price: newPrice.trim() === '' ? '' : Math.max(0, Number(newPrice) || 0) }
+            : order
+        ),
+      },
+    };
+    setGcashRecords(updatedRecords);
   };
 
 
@@ -739,7 +784,28 @@ export default function GCashScreen() {
 
                     )}
 
-                  </View>
+
+
+                    <Text style={styles.customerLabel}>
+                      ADDRESS
+                    </Text>
+                    {editingIndex === index ? (
+                      <TextInput
+                        style={styles.addressInput}
+                        value={record.result?.address || ''}
+                        placeholder="Enter customer address (optional)"
+                        onChangeText={(text) =>
+                          updateCustomerAddress(index, text)
+                        }
+                        multiline
+                      />
+                    ) : (
+                      <Text style={styles.addressText}>
+                        {record.result?.address?.trim() || 'No address provided'}
+                      </Text>
+                    )}
+
+</View>
 
                   <View
                     style={
@@ -799,17 +865,11 @@ export default function GCashScreen() {
                       order.cheese === true;
 
                     const price =
-                      getItemPrice(
-                        itemName,
-                        cheese
-                      );
+                      order.price !== undefined && order.price !== null
+                        ? (Number(order.price) || 0)
+                        : getItemPrice(itemName, cheese);
 
-                    const itemTotal =
-                      getItemTotal(
-                        itemName,
-                        quantity,
-                        cheese
-                      );
+                    const itemTotal = getOrderItemTotal(order);
 
                     total +=
                       itemTotal;
@@ -877,13 +937,12 @@ export default function GCashScreen() {
                             x
                           </Text>
 
-                          <Text
-                            style={
-                              styles.itemPrice
-                            }
-                          >
-                            ₱{price}
-                          </Text>
+                          <TextInput
+                            style={styles.priceInput}
+                            value={String(order.price !== undefined && order.price !== null ? order.price : price)}
+                            keyboardType="decimal-pad"
+                            onChangeText={(text) => updateItemPrice(index, orderIndex, text)}
+                          />
 
                         </View>
 
@@ -1403,6 +1462,25 @@ const styles = StyleSheet.create({
     color: '#351620',
   },
 
+  addressText: {
+    fontSize: 13,
+    color: '#6B5A48',
+    marginTop: 2,
+    marginBottom: 6,
+  },
+
+  addressInput: {
+    minHeight: 42,
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+    borderRadius: 10,
+    fontSize: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    color: '#352615',
+    marginBottom: 6,
+  },
+
   customerInput: {
     height: 43,
 
@@ -1541,6 +1619,19 @@ const styles = StyleSheet.create({
     color: '#351620',
 
     backgroundColor: '#FFF9FB',
+  },
+
+  priceInput: {
+    width: 78,
+    height: 40,
+    borderWidth: 1,
+    borderColor: '#E8B5C9',
+    borderRadius: 9,
+    textAlign: 'center',
+    fontSize: 14,
+    color: '#351620',
+    backgroundColor: '#FFF9FB',
+    marginLeft: 7,
   },
 
   xText: {

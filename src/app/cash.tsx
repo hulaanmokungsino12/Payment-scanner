@@ -150,6 +150,18 @@ const getItemTotal = (
   );
 };
 
+
+// Uses the saved per-item price when one has been set. Older orders keep
+// the existing menu/seaweed pricing until their price is manually edited.
+const getOrderItemTotal = (order: any) => {
+  const quantity = Math.max(0, Number(order.quantity) || 0);
+  if (order.price !== undefined && order.price !== null) {
+    const price = Math.max(0, Number(order.price) || 0);
+    return price * quantity;
+  }
+  return getItemTotal(order.item || '', quantity, order.cheese === true);
+};
+
 export default function CashScreen() {
 
   const { role } = useAuth();
@@ -180,6 +192,24 @@ export default function CashScreen() {
     setCashRecords(
       updatedRecords
     );
+  };
+
+  // Update the address for this order only
+  const updateCustomerAddress = (
+    recordIndex: number,
+    newAddress: string
+  ) => {
+    const updatedRecords = cashRecords.map((record, index) => {
+      if (index !== recordIndex) return record;
+      return {
+        ...record,
+        result: {
+          ...(record.result || {}),
+          address: newAddress,
+        },
+      };
+    });
+    setCashRecords(updatedRecords);
   };
 
 
@@ -214,11 +244,7 @@ export default function CashScreen() {
               order.cheese === true;
 
             const itemTotal =
-              getItemTotal(
-                itemName,
-                quantity,
-                cheese
-              );
+              getOrderItemTotal(order);
 
             totalPaid +=
               itemTotal;
@@ -424,6 +450,31 @@ export default function CashScreen() {
     setCashRecords(
       updatedRecords
     );
+  };
+
+
+  // ========================================
+  // UPDATE ITEM PRICE (THIS ORDER ONLY)
+  // ========================================
+
+  const updateItemPrice = (
+    recordIndex: number,
+    orderIndex: number,
+    newPrice: string
+  ) => {
+    const updatedRecords = [...cashRecords];
+    const order = { ...updatedRecords[recordIndex].result.orders[orderIndex] };
+    order.price = newPrice.trim() === '' ? '' : Math.max(0, Number(newPrice) || 0);
+    updatedRecords[recordIndex] = {
+      ...updatedRecords[recordIndex],
+      result: {
+        ...updatedRecords[recordIndex].result,
+        orders: updatedRecords[recordIndex].result.orders.map((item: any, i: number) =>
+          i === orderIndex ? order : item
+        ),
+      },
+    };
+    setCashRecords(updatedRecords);
   };
 
 
@@ -659,7 +710,28 @@ export default function CashScreen() {
 
                     )}
 
-                  </View>
+
+
+                    <Text style={styles.customerLabel}>
+                      ADDRESS
+                    </Text>
+                    {editingIndex === index ? (
+                      <TextInput
+                        style={styles.addressInput}
+                        value={record.result?.address || ''}
+                        placeholder="Enter customer address (optional)"
+                        onChangeText={(text) =>
+                          updateCustomerAddress(index, text)
+                        }
+                        multiline
+                      />
+                    ) : (
+                      <Text style={styles.addressText}>
+                        {record.result?.address?.trim() || 'No address provided'}
+                      </Text>
+                    )}
+
+</View>
 
 
                   {/* CASH BADGE */}
@@ -706,17 +778,12 @@ export default function CashScreen() {
                       order.cheese === true;
 
                     const price =
-                      getItemPrice(
-                        itemName,
-                        cheese
-                      );
+                      order.price !== undefined && order.price !== null
+                        ? (order.price === '' ? 0 : Math.max(0, Number(order.price) || 0))
+                        : getItemPrice(itemName, cheese);
 
                     const itemTotal =
-                      getItemTotal(
-                        itemName,
-                        quantity,
-                        cheese
-                      );
+                      getOrderItemTotal(order);
 
                     total += itemTotal;
 
@@ -779,13 +846,14 @@ export default function CashScreen() {
                             x
                           </Text>
 
-                          <Text
-                            style={
-                              styles.itemPrice
+                          <TextInput
+                            style={styles.priceInput}
+                            value={String(price)}
+                            keyboardType="decimal-pad"
+                            onChangeText={(text) =>
+                              updateItemPrice(index, orderIndex, text)
                             }
-                          >
-                            ₱{price}
-                          </Text>
+                          />
 
                         </View>
 
@@ -1273,6 +1341,25 @@ const styles = StyleSheet.create({
     color: '#3D301C',
   },
 
+  addressText: {
+    fontSize: 13,
+    color: '#6B5A48',
+    marginTop: 2,
+    marginBottom: 6,
+  },
+
+  addressInput: {
+    minHeight: 42,
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+    borderRadius: 10,
+    fontSize: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    color: '#352615',
+    marginBottom: 6,
+  },
+
   customerInput: {
     height: 43,
 
@@ -1414,6 +1501,20 @@ const styles = StyleSheet.create({
     color: '#3D301C',
 
     backgroundColor: '#FFFCF5',
+  },
+
+  priceInput: {
+    width: 78,
+    height: 40,
+    borderWidth: 1,
+    borderColor: '#E2C78E',
+    borderRadius: 9,
+    textAlign: 'center',
+    fontSize: 14,
+    color: '#3D301C',
+    backgroundColor: '#FFFCF5',
+    paddingHorizontal: 5,
+    marginLeft: 7,
   },
 
   xText: {

@@ -146,6 +146,28 @@ const getItemTotal = (
 };
 
 
+// ========================================
+// GET ORDER ITEM TOTAL
+// Uses a saved custom price when present.
+// Older orders keep their original pricing rules.
+// ========================================
+
+const getOrderItemTotal = (order: any) => {
+  const quantity = Math.max(0, Number(order.quantity) || 0);
+
+  // If price exists, use it even when the field is temporarily blank.
+  if (order.price !== undefined && order.price !== null) {
+    const price = Math.max(0, Number(order.price) || 0);
+    return price * quantity;
+  }
+
+  return getItemTotal(
+    order.item || '',
+    quantity,
+    order.cheese === true
+  );
+};
+
 export default function UnknownScreen() {
 
   const { role } = useAuth();
@@ -178,6 +200,24 @@ export default function UnknownScreen() {
     setUnknownRecords(
       updatedRecords
     );
+  };
+
+  // Update the address for this order only
+  const updateCustomerAddress = (
+    recordIndex: number,
+    newAddress: string
+  ) => {
+    const updatedRecords = unknownRecords.map((record, index) => {
+      if (index !== recordIndex) return record;
+      return {
+        ...record,
+        result: {
+          ...(record.result || {}),
+          address: newAddress,
+        },
+      };
+    });
+    setUnknownRecords(updatedRecords);
   };
 
 
@@ -218,21 +258,7 @@ export default function UnknownScreen() {
         record.result?.orders?.forEach(
           (order: any) => {
 
-            const itemName =
-              order.item || '';
-
-            const quantity =
-              order.quantity || 0;
-
-            const cheese =
-              order.cheese === true;
-
-            total +=
-              getItemTotal(
-                itemName,
-                quantity,
-                cheese
-              );
+            total += getOrderItemTotal(order);
 
           }
         );
@@ -264,21 +290,7 @@ export default function UnknownScreen() {
         record.result?.orders?.forEach(
           (order: any) => {
 
-            const itemName =
-              order.item || '';
-
-            const quantity =
-              order.quantity || 0;
-
-            const cheese =
-              order.cheese === true;
-
-            totalPaid +=
-              getItemTotal(
-                itemName,
-                quantity,
-                cheese
-              );
+            totalPaid += getOrderItemTotal(order);
 
           }
         );
@@ -466,6 +478,41 @@ export default function UnknownScreen() {
 
   };
 
+
+  // ========================================
+  // UPDATE ITEM PRICE
+  // ========================================
+
+  const updateItemPrice = (
+    recordIndex: number,
+    orderIndex: number,
+    newPrice: string
+  ) => {
+    setUnknownRecords((current) =>
+      current.map((record, index) => {
+        if (index !== recordIndex) return record;
+
+        const updatedOrders = (record.result?.orders || []).map(
+          (order: any, itemIndex: number) => {
+            if (itemIndex !== orderIndex) return order;
+
+            return {
+              ...order,
+              price: newPrice === '' ? '' : Math.max(0, Number(newPrice) || 0),
+            };
+          }
+        );
+
+        return {
+          ...record,
+          result: {
+            ...record.result,
+            orders: updatedOrders,
+          },
+        };
+      })
+    );
+  };
 
   // ========================================
   // SAVE UPDATED RECORD
@@ -795,7 +842,28 @@ export default function UnknownScreen() {
 
                     )}
 
-                  </View>
+
+
+                    <Text style={styles.customerLabel}>
+                      ADDRESS
+                    </Text>
+                    {editingIndex === index ? (
+                      <TextInput
+                        style={styles.addressInput}
+                        value={record.result?.address || ''}
+                        placeholder="Enter customer address (optional)"
+                        onChangeText={(text) =>
+                          updateCustomerAddress(index, text)
+                        }
+                        multiline
+                      />
+                    ) : (
+                      <Text style={styles.addressText}>
+                        {record.result?.address?.trim() || 'No address provided'}
+                      </Text>
+                    )}
+
+</View>
 
 
                   {/* UNKNOWN BADGE */}
@@ -858,17 +926,11 @@ export default function UnknownScreen() {
                       order.cheese === true;
 
                     const price =
-                      getItemPrice(
-                        itemName,
-                        cheese
-                      );
+                      order.price !== undefined && order.price !== null
+                        ? order.price
+                        : getItemPrice(itemName, cheese);
 
-                    const itemTotal =
-                      getItemTotal(
-                        itemName,
-                        quantity,
-                        cheese
-                      );
+                    const itemTotal = getOrderItemTotal(order);
 
                     total +=
                       itemTotal;
@@ -936,13 +998,15 @@ export default function UnknownScreen() {
                             x
                           </Text>
 
-                          <Text
-                            style={
-                              styles.itemPrice
+                          <TextInput
+                            style={styles.priceInput}
+                            value={String(price)}
+                            keyboardType="decimal-pad"
+                            placeholder="Price"
+                            onChangeText={(text) =>
+                              updateItemPrice(index, orderIndex, text)
                             }
-                          >
-                            ₱{price}
-                          </Text>
+                          />
 
                         </View>
 
@@ -1544,6 +1608,25 @@ const styles = StyleSheet.create({
     color: '#352615',
   },
 
+  addressText: {
+    fontSize: 13,
+    color: '#6B5A48',
+    marginTop: 2,
+    marginBottom: 6,
+  },
+
+  addressInput: {
+    minHeight: 42,
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+    borderRadius: 10,
+    fontSize: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    color: '#352615',
+    marginBottom: 6,
+  },
+
   customerInput: {
     height: 43,
 
@@ -1685,6 +1768,19 @@ const styles = StyleSheet.create({
     color: '#352615',
 
     backgroundColor: '#FFFCF7',
+  },
+
+  priceInput: {
+    width: 78,
+    height: 40,
+    borderWidth: 1,
+    borderColor: '#E8CFA9',
+    borderRadius: 9,
+    textAlign: 'center',
+    fontSize: 15,
+    color: '#352615',
+    backgroundColor: '#FFFCF7',
+    marginLeft: 7,
   },
 
   xText: {
